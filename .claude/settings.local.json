@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path C:\\\\AlignFit -Force)",
+      "Bash(Select-Object Name, Mode)"
+    ]
+  }
+}
