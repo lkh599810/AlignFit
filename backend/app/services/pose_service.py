@@ -3,13 +3,15 @@ import numpy as np
 import mediapipe as mp
 
 mp_pose = mp.solutions.pose
+INVALID_IMAGE = "invalid_image"
+NO_POSE_DETECTED = "no_pose_detected"
 
 
 def extract_landmarks(image_bytes: bytes):
     nparr = np.frombuffer(image_bytes, np.uint8)
     image_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if image_bgr is None:
-        return None
+        return INVALID_IMAGE
 
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
@@ -17,6 +19,6 @@ def extract_landmarks(image_bytes: bytes):
         results = pose.process(image_rgb)
 
     if not results.pose_landmarks:
-        return None
+        return NO_POSE_DETECTED
 
     return results.pose_landmarks.landmark

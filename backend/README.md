@@ -27,7 +27,7 @@ Interactive docs: `http://localhost:8000/docs`
 
 Upload a body posture image and receive posture analysis and exercise recommendations.
 
-**Request** — multipart form data:
+**Request** - multipart form data:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -59,8 +59,18 @@ If no pose is detected:
   "shoulder_height_difference": 0.0,
   "hip_height_difference": 0.0,
   "simple_summary": "No pose landmarks detected in the image.",
-  "recommendations": [],
-  "caution_message": "..."
+  "recommendations": [
+    "Upload a clear, well-lit full-body posture photo for analysis."
+  ],
+  "caution_message": "This result is a simple posture analysis for educational purposes. It is not a medical diagnosis. If pain continues or worsens, consult a medical professional."
+}
+```
+
+If the uploaded file cannot be decoded as an image, the API returns `400 Bad Request`:
+
+```json
+{
+  "detail": "Invalid image file. Please upload a valid JPEG or PNG image."
 }
 ```
 
