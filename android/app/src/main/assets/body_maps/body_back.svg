@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AlignFit body map: back view.
+  Screen-left = the user's own left side (natural when viewed from behind).
+  Each selectable region is a <polygon> with a unique id.
+  Ellipses are decorative (head) and not selectable.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="440" viewBox="0 0 200 440">
+  <title>AlignFit back body map</title>
+  <g fill="#C9CED6" stroke="#8E97A3" stroke-width="1.5" stroke-linejoin="round">
+    <ellipse cx="100" cy="28" rx="20" ry="24"/>
+    <polygon id="back_neck" points="88,54 112,54 112,72 88,72"/>
+    <polygon id="back_left_shoulder" points="50,84 88,72 88,98 56,104"/>
+    <polygon id="back_right_shoulder" points="112,72 150,84 144,104 112,98"/>
+    <polygon id="back_left_upper_back" points="64,98 100,98 100,152 66,152"/>
+    <polygon id="back_right_upper_back" points="100,98 136,98 134,152 100,152"/>
+    <polygon id="back_left_lower_back" points="66,152 100,152 100,198 68,198"/>
+    <polygon id="back_right_lower_back" points="100,152 134,152 132,198 100,198"/>
+    <polygon id="back_left_glute" points="68,198 100,198 100,250 66,250"/>
+    <polygon id="back_right_glute" points="100,198 132,198 134,250 100,250"/>
+    <polygon id="back_left_upper_arm" points="34,104 56,98 58,174 38,176"/>
+    <polygon id="back_right_upper_arm" points="144,98 166,104 162,176 142,174"/>
+    <polygon id="back_left_forearm" points="38,176 58,174 56,242 40,242"/>
+    <polygon id="back_right_forearm" points="142,174 162,176 160,242 144,242"/>
+    <polygon id="back_left_hand_wrist" points="38,242 56,242 56,278 36,278"/>
+    <polygon id="back_right_hand_wrist" points="144,242 162,242 164,278 144,278"/>
+    <polygon id="back_left_thigh" points="66,250 98,250 96,330 70,330"/>
+    <polygon id="back_right_thigh" points="102,250 134,250 130,330 104,330"/>
+    <polygon id="back_left_knee" points="70,330 96,330 94,360 72,360"/>
+    <polygon id="back_right_knee" points="104,330 130,330 128,360 106,360"/>
+    <polygon id="back_left_calf" points="72,360 94,360 90,414 76,414"/>
+    <polygon id="back_right_calf" points="106,360 128,360 124,414 110,414"/>
+    <polygon id="back_left_ankle_foot" points="74,414 92,414 92,436 66,436"/>
+    <polygon id="back_right_ankle_foot" points="108,414 126,414 134,436 108,436"/>
+  </g>
+</svg>

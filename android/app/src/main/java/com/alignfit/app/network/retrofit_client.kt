@@ -11,8 +11,8 @@ object RetrofitClient {
     // Change to http://127.0.0.1:8000/ when running on a physical device
     // that is on the same network as the backend server.
 //    private const val BASE_URL = "http://10.0.2.2:8000/"
-    private const val BASE_URL = "http://172.26.141.147:8000/"
-
+//    private const val BASE_URL = "http://172.26.141.147:8000/"
+    private const val BASE_URL = "http://192.168.0.2:8000/"
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }

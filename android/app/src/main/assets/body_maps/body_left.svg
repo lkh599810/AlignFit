@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AlignFit body map: left side view (the person faces the left edge of the image).
+  Front of the body = smaller x values, back of the body = larger x values.
+  Each selectable region is a <polygon> with a unique id.
+  Ellipses are decorative (head) and not selectable.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="440" viewBox="0 0 200 440">
+  <title>AlignFit left side body map</title>
+  <g fill="#C9CED6" stroke="#8E97A3" stroke-width="1.5" stroke-linejoin="round">
+    <ellipse cx="96" cy="28" rx="20" ry="24"/>
+    <polygon id="left_side_neck" points="88,54 110,54 110,72 88,72"/>
+    <polygon id="left_side_shoulder" points="78,72 126,72 126,102 78,102"/>
+    <polygon id="left_side_chest" points="68,102 88,102 88,154 70,154"/>
+    <polygon id="left_side_abdomen" points="70,154 88,154 88,208 70,208"/>
+    <polygon id="left_side_upper_back" points="112,102 130,102 128,156 112,156"/>
+    <polygon id="left_side_lower_back" points="112,156 128,156 126,208 112,208"/>
+    <polygon id="left_side_upper_arm" points="88,102 112,102 112,174 88,174"/>
+    <polygon id="left_side_forearm" points="88,174 112,174 110,242 90,242"/>
+    <polygon id="left_side_hand_wrist" points="90,242 110,242 110,278 90,278"/>
+    <polygon id="left_side_hip" points="68,208 100,208 100,252 72,252"/>
+    <polygon id="left_side_glute" points="100,208 126,208 130,252 100,252"/>
+    <polygon id="left_side_front_thigh" points="72,252 100,252 100,330 76,330"/>
+    <polygon id="left_side_back_thigh" points="100,252 130,252 124,330 100,330"/>
+    <polygon id="left_side_knee" points="76,330 124,330 118,360 80,360"/>
+    <polygon id="left_side_calf" points="80,360 118,360 112,414 84,414"/>
+    <polygon id="left_side_ankle_foot" points="84,414 112,414 112,436 58,436 58,426 84,420"/>
+  </g>
+</svg>
