@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app.schemas.analysis_schema import AnalysisResponse
+from app.services.annotation_service import annotate_image
 from app.services.pose_service import INVALID_IMAGE, NO_POSE_DETECTED, extract_landmarks
 from app.services.posture_analysis_service import analyze_posture
 from app.services.recommendation_service import CAUTION_MESSAGE, generate_recommendations
@@ -12,8 +13,11 @@ _NO_POSE_RESPONSE = AnalysisResponse(
     landmark_count=0,
     shoulder_height_difference=0.0,
     hip_height_difference=0.0,
-    simple_summary="No pose landmarks detected in the image.",
-    recommendations=["Upload a clear, well-lit full-body posture photo for analysis."],
+    simple_summary=(
+        "이미지에서 자세 landmark를 감지하지 못했습니다. "
+        "밝고 선명한 전신 정면 사진을 사용해 주세요."
+    ),
+    recommendations=["분석을 위해 밝고 선명한 전신 자세 사진을 업로드해 주세요."],
     caution_message=CAUTION_MESSAGE,
 )
 
@@ -26,7 +30,7 @@ async def analyze_image(image: UploadFile = File(...)):
     if landmarks == INVALID_IMAGE:
         raise HTTPException(
             status_code=400,
-            detail="Invalid image file. Please upload a valid JPEG or PNG image.",
+            detail="유효하지 않은 이미지 파일입니다. JPEG 또는 PNG 형식의 이미지를 업로드해 주세요.",
         )
 
     if landmarks == NO_POSE_DETECTED:
@@ -36,7 +40,15 @@ async def analyze_image(image: UploadFile = File(...)):
     recommendations = generate_recommendations(
         analysis["shoulder_height_difference"],
         analysis["hip_height_difference"],
+        analysis["shoulder_slope"],
+        analysis["hip_slope"],
+        analysis["shoulder_hip_center_offset"],
+        analysis["low_visibility_landmarks"],
+        head_tilt_score=analysis["head_tilt_score"],
+        head_center_offset=analysis["head_center_offset"],
+        foot_angle_diff=analysis["foot_angle_diff"],
     )
+    annotated_b64 = annotate_image(image_bytes, landmarks, analysis)
 
     return AnalysisResponse(
         landmark_detected=True,
@@ -46,4 +58,5 @@ async def analyze_image(image: UploadFile = File(...)):
         simple_summary=analysis["simple_summary"],
         recommendations=recommendations["exercises"],
         caution_message=recommendations["caution_message"],
+        annotated_image_base64=annotated_b64 or None,
     )

@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.alignfit.app.data.HomecareDictionary
 import org.xmlpull.v1.XmlPullParser
 import kotlin.math.min
 
@@ -108,47 +109,6 @@ fun loadBodyMap(context: Context, fileName: String): BodyMap {
         }
         return BodyMap(viewBoxWidth, viewBoxHeight, regions, decorations)
     }
-}
-
-// ─── Korean Labels ────────────────────────────────────────────────────────────
-
-private val REGION_LABELS = mapOf(
-    "neck" to "목",
-    "shoulder" to "어깨",
-    "chest" to "가슴",
-    "abdomen" to "복부",
-    "upper_back" to "등(상부)",
-    "lower_back" to "허리(등 하부)",
-    "waist" to "허리 옆",
-    "glute" to "엉덩이",
-    "upper_arm" to "위팔",
-    "forearm" to "아래팔",
-    "hand_wrist" to "손/손목",
-    "hip" to "골반",
-    "thigh" to "허벅지",
-    "front_thigh" to "허벅지 앞",
-    "back_thigh" to "허벅지 뒤",
-    "knee" to "무릎",
-    "calf" to "종아리",
-    "ankle_foot" to "발목/발"
-)
-
-fun regionKoreanLabel(id: String): String {
-    var rest = id
-    val view = when {
-        rest.startsWith("front_") -> { rest = rest.removePrefix("front_"); "정면" }
-        rest.startsWith("back_") -> { rest = rest.removePrefix("back_"); "후면" }
-        rest.startsWith("left_side_") -> { rest = rest.removePrefix("left_side_"); "좌측면" }
-        rest.startsWith("right_side_") -> { rest = rest.removePrefix("right_side_"); "우측면" }
-        else -> ""
-    }
-    val side = when {
-        rest.startsWith("left_") -> { rest = rest.removePrefix("left_"); "왼쪽 " }
-        rest.startsWith("right_") -> { rest = rest.removePrefix("right_"); "오른쪽 " }
-        else -> ""
-    }
-    val region = REGION_LABELS[rest] ?: rest
-    return "$side$region ($view)"
 }
 
 // ─── Hit Testing ──────────────────────────────────────────────────────────────
@@ -314,7 +274,7 @@ fun BodyMapSelectionScreen(
                     selectedRegions.sorted().forEach { id ->
                         AssistChip(
                             onClick = { onRegionToggled(id) },
-                            label = { Text(regionKoreanLabel(id), fontSize = 12.sp) }
+                            label = { Text(HomecareDictionary.svgRegionLabel(id), fontSize = 12.sp) }
                         )
                     }
                 }

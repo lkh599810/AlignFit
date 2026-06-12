@@ -12,20 +12,20 @@
     <polygon id="back_neck" points="88,54 112,54 112,72 88,72"/>
     <polygon id="back_left_shoulder" points="50,84 88,72 88,98 56,104"/>
     <polygon id="back_right_shoulder" points="112,72 150,84 144,104 112,98"/>
-    <polygon id="back_left_upper_back" points="64,98 100,98 100,152 66,152"/>
-    <polygon id="back_right_upper_back" points="100,98 136,98 134,152 100,152"/>
-    <polygon id="back_left_lower_back" points="66,152 100,152 100,198 68,198"/>
-    <polygon id="back_right_lower_back" points="100,152 134,152 132,198 100,198"/>
-    <polygon id="back_left_glute" points="68,198 100,198 100,250 66,250"/>
-    <polygon id="back_right_glute" points="100,198 132,198 134,250 100,250"/>
+    <polygon id="back_upper_back" points="64,98 136,98 134,148 66,148"/>
+    <polygon id="back_lower_back" points="66,148 134,148 133,178 67,178"/>
+    <polygon id="back_left_waist" points="67,178 100,178 100,202 68,202"/>
+    <polygon id="back_right_waist" points="100,178 133,178 132,202 100,202"/>
+    <polygon id="back_left_glute" points="68,202 100,202 100,250 66,250"/>
+    <polygon id="back_right_glute" points="100,202 132,202 134,250 100,250"/>
     <polygon id="back_left_upper_arm" points="34,104 56,98 58,174 38,176"/>
     <polygon id="back_right_upper_arm" points="144,98 166,104 162,176 142,174"/>
     <polygon id="back_left_forearm" points="38,176 58,174 56,242 40,242"/>
     <polygon id="back_right_forearm" points="142,174 162,176 160,242 144,242"/>
     <polygon id="back_left_hand_wrist" points="38,242 56,242 56,278 36,278"/>
     <polygon id="back_right_hand_wrist" points="144,242 162,242 164,278 144,278"/>
-    <polygon id="back_left_thigh" points="66,250 98,250 96,330 70,330"/>
-    <polygon id="back_right_thigh" points="102,250 134,250 130,330 104,330"/>
+    <polygon id="back_left_back_thigh" points="66,250 98,250 96,330 70,330"/>
+    <polygon id="back_right_back_thigh" points="102,250 134,250 130,330 104,330"/>
     <polygon id="back_left_knee" points="70,330 96,330 94,360 72,360"/>
     <polygon id="back_right_knee" points="104,330 130,330 128,360 106,360"/>
     <polygon id="back_left_calf" points="72,360 94,360 90,414 76,414"/>

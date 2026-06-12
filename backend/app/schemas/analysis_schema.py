@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class AnalysisResponse(BaseModel):
@@ -10,3 +10,4 @@ class AnalysisResponse(BaseModel):
     simple_summary: str
     recommendations: List[str]
     caution_message: str
+    annotated_image_base64: Optional[str] = None

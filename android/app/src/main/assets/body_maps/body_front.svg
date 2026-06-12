@@ -12,21 +12,18 @@
     <polygon id="front_neck" points="88,54 112,54 112,72 88,72"/>
     <polygon id="front_left_shoulder" points="50,84 88,72 88,98 56,104"/>
     <polygon id="front_right_shoulder" points="112,72 150,84 144,104 112,98"/>
-    <polygon id="front_left_chest" points="64,98 100,98 100,148 66,148"/>
-    <polygon id="front_right_chest" points="100,98 136,98 134,148 100,148"/>
+    <polygon id="front_chest" points="64,98 136,98 134,148 66,148"/>
     <polygon id="front_abdomen" points="66,148 134,148 132,190 68,190"/>
-    <polygon id="front_left_waist" points="68,190 100,190 100,216 70,216"/>
-    <polygon id="front_right_waist" points="100,190 132,190 130,216 100,216"/>
-    <polygon id="front_left_hip" points="70,216 100,216 100,248 68,248"/>
-    <polygon id="front_right_hip" points="100,216 130,216 132,248 100,248"/>
+    <polygon id="front_left_hip" points="68,190 100,190 100,248 68,248"/>
+    <polygon id="front_right_hip" points="100,190 132,190 132,248 100,248"/>
     <polygon id="front_left_upper_arm" points="34,104 56,98 58,174 38,176"/>
     <polygon id="front_right_upper_arm" points="144,98 166,104 162,176 142,174"/>
     <polygon id="front_left_forearm" points="38,176 58,174 56,242 40,242"/>
     <polygon id="front_right_forearm" points="142,174 162,176 160,242 144,242"/>
     <polygon id="front_left_hand_wrist" points="38,242 56,242 56,278 36,278"/>
     <polygon id="front_right_hand_wrist" points="144,242 162,242 164,278 144,278"/>
-    <polygon id="front_left_thigh" points="68,248 98,248 96,330 70,330"/>
-    <polygon id="front_right_thigh" points="102,248 132,248 130,330 104,330"/>
+    <polygon id="front_left_front_thigh" points="68,248 98,248 96,330 70,330"/>
+    <polygon id="front_right_front_thigh" points="102,248 132,248 130,330 104,330"/>
     <polygon id="front_left_knee" points="70,330 96,330 94,360 72,360"/>
     <polygon id="front_right_knee" points="104,330 130,330 128,360 106,360"/>
     <polygon id="front_left_calf" points="72,360 94,360 90,414 76,414"/>
