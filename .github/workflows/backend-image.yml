@@ -1,0 +1,35 @@
+﻿name: Build AlignFit Backend Image
+
+on:
+  push:
+    branches:
+      - mobile-submission
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-image.yml"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/lkh599810/alignfit-backend:mobile-submission
