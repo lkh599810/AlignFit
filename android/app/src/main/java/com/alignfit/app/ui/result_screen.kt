@@ -28,6 +28,7 @@ internal fun AnalysisResultScreen(
     bodyMapSelections: Set<String>,
     onExercise: () -> Unit,
     onConsultation: () -> Unit,
+    onRestart: () -> Unit,
     onBack: () -> Unit
 ) {
     val postureFlags = remember(result) { HomecareDictionary.inferPostureFlags(result) }
@@ -84,48 +85,40 @@ internal fun AnalysisResultScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (hasPainSelection) {
-                OutlinedButton(
-                    onClick = onConsultation,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("증상 알아보기")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            if (hasPostureIssue) {
-                Button(
-                    onClick = onExercise,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("추천 운동 보러가기", fontSize = 15.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             result?.cautionMessage?.let { caution ->
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = caution,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(12.dp),
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(14.dp),
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (hasPostureIssue) {
+                PrimaryButton(text = "추천 운동 보기", onClick = onExercise)
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            if (hasPainSelection) {
+                SecondaryButton(text = "상담 메모 보기", onClick = onConsultation)
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            TextButton(
+                onClick = onRestart,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("처음으로 돌아가기", fontSize = 14.sp)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -133,6 +126,7 @@ internal fun AnalysisResultScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SelectionSummaryCard(
     selectedPainIds: Set<String>,
@@ -150,23 +144,42 @@ private fun SelectionSummaryCard(
                 fontSize = 14.sp
             )
             if (selectedPainIds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "통증 체크: " + selectedPainIds.sorted()
-                        .joinToString(", ") { HomecareDictionary.painLabel(it) },
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(modifier = Modifier.height(8.dp))
+                SelectionChipRow(
+                    label = "통증 체크",
+                    items = selectedPainIds.sorted().map { HomecareDictionary.painLabel(it) }
                 )
             }
             if (bodyMapSelections.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "바디맵 선택: " + bodyMapSelections.sorted()
-                        .joinToString(", ") { HomecareDictionary.svgRegionLabel(it) },
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(modifier = Modifier.height(8.dp))
+                SelectionChipRow(
+                    label = "그림 선택",
+                    items = bodyMapSelections.sorted().map { HomecareDictionary.svgRegionLabel(it) }
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SelectionChipRow(label: String, items: List<String>) {
+    Text(
+        text = label,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(4.dp))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        items.forEach { text ->
+            AssistChip(
+                onClick = {},
+                label = { Text(text, fontSize = 12.sp) }
+            )
         }
     }
 }

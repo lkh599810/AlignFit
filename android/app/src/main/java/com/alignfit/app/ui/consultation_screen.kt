@@ -33,7 +33,7 @@ internal fun ConsultationGuideScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "증상 상담 준비", onBack = onBack)
+        ScreenTopBar(title = "상담 준비 메모", onBack = onBack)
         Column(
             modifier = Modifier
                 .weight(1f)

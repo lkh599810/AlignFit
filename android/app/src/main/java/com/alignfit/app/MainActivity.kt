@@ -4,10 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.alignfit.app.ui.AlignFitTheme
 import com.alignfit.app.ui.MainScreen
 
 class MainActivity : ComponentActivity() {
@@ -15,8 +17,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.safeDrawingPadding()) {
+            AlignFitTheme {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .safeDrawingPadding(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
                     MainScreen()
                 }
             }

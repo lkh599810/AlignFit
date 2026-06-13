@@ -49,7 +49,7 @@ internal fun ExerciseRecommendationScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "추천 운동", onBack = onBack)
+        ScreenTopBar(title = "추천 홈케어 운동", onBack = onBack)
         Column(
             modifier = Modifier
                 .weight(1f)

@@ -154,7 +154,7 @@ fun BodyMapSelectionScreen(
     val selectedStrokeColor = MaterialTheme.colorScheme.primary
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "통증 부위 직접 선택", onBack = onBack)
+        ScreenTopBar(title = "그림에서 부위 선택", onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -313,24 +313,16 @@ fun BodyMapSelectionScreen(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            OutlinedButton(
+            SecondaryButton(
+                text = "이전",
                 onClick = onBack,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("이전", fontSize = 16.sp)
-            }
-            Button(
+                modifier = Modifier.weight(1f)
+            )
+            PrimaryButton(
+                text = "다음",
                 onClick = onNext,
-                modifier = Modifier
-                    .weight(2f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("다음", fontSize = 16.sp)
-            }
+                modifier = Modifier.weight(2f)
+            )
         }
     }
 }

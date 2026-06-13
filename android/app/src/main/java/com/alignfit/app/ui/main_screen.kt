@@ -11,12 +11,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -109,6 +112,15 @@ fun MainScreen() {
             bodyMapSelections = bodyMapSelections,
             onExercise = { currentScreen = AppScreen.ExerciseRecommendation },
             onConsultation = { currentScreen = AppScreen.ConsultationGuide },
+            onRestart = {
+                selectedPainIds = setOf()
+                bodyMapSelections = setOf()
+                selectedImageUri = null
+                selectedImageBitmap = null
+                analysisResult = null
+                annotatedBitmap = null
+                currentScreen = AppScreen.Landing
+            },
             onBack = { currentScreen = AppScreen.ImageUpload }
         )
         AppScreen.ConsultationGuide -> ConsultationGuideScreen(
@@ -134,33 +146,76 @@ private fun LandingScreen(onStart: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 32.dp),
+            .padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Soft gradient hero card with monogram badge, name, and subtitle.
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+                    .padding(horizontal = 24.dp, vertical = 36.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "A",
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = "AlignFit",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "사진과 통증 부위를 바탕으로 자세 상태를 확인하고, " +
+                        "부담이 적은 홈케어 운동을 추천해요.",
+                    fontSize = 14.sp,
+                    lineHeight = 21.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        PrimaryButton(text = "내 자세 확인하기", onClick = onStart)
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         Text(
-            text = "AlignFit",
-            fontSize = 48.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "AI 기반 자세 분석 및 홈케어 가이드",
-            fontSize = 15.sp,
+            text = "의학적 진단이 아닌 참고용 자세 분석입니다.",
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(72.dp))
-        Button(
-            onClick = onStart,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("자세 교정 시작하기", fontSize = 16.sp)
-        }
     }
 }
 
@@ -174,18 +229,16 @@ private fun PainSelectionScreen(
     onBack: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "통증 부위 선택", onBack = onBack)
+        ScreenTopBar(title = "불편한 부위 선택", onBack = onBack)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            Text(
-                text = "현재 통증이 느껴지는 부위를 선택해 주세요. 선택 없이도 계속할 수 있습니다.",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp)
+            ScreenSubtitle(
+                text = "지금 불편한 부위를 선택해 주세요. 선택하지 않고 넘어가도 괜찮아요.",
+                modifier = Modifier.padding(vertical = 10.dp)
             )
             HomecareDictionary.PAIN_REGION_GROUPS.forEach { group ->
                 PainRegionGroupCard(
@@ -202,15 +255,7 @@ private fun PainSelectionScreen(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Button(
-                onClick = onNext,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("다음", fontSize = 16.sp)
-            }
+            PrimaryButton(text = "다음", onClick = onNext)
         }
     }
 }
@@ -281,7 +326,7 @@ private fun ImageUploadScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "사진 업로드", onBack = onBack)
+        ScreenTopBar(title = "자세 사진", onBack = onBack)
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -289,12 +334,18 @@ private fun ImageUploadScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            ScreenSubtitle(
+                text = "전신이 잘 보이는 밝은 정면 사진일수록 분석이 정확해요.",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            )
             val previewBgColor = MaterialTheme.colorScheme.surfaceVariant
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(280.dp)
-                    .background(previewBgColor, RoundedCornerShape(12.dp)),
+                    .background(previewBgColor, RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (selectedImageBitmap != null) {
@@ -306,7 +357,7 @@ private fun ImageUploadScreen(
                     )
                 } else {
                     Text(
-                        text = "사진을 선택해 주세요",
+                        text = "아직 선택된 사진이 없어요",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
@@ -315,15 +366,10 @@ private fun ImageUploadScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            OutlinedButton(
-                onClick = { imagePickerLauncher.launch("image/*") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text("사진 올리기")
-            }
+            SecondaryButton(
+                text = "자세 사진 선택",
+                onClick = { imagePickerLauncher.launch("image/*") }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -365,9 +411,13 @@ private fun ImageUploadScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             ) {
-                Text(if (isLoading) "분석 중..." else "분석하기", fontSize = 16.sp)
+                Text(
+                    text = if (isLoading) "분석 중..." else "자세 분석하기",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             if (isLoading) {
@@ -408,20 +458,27 @@ private fun ImageUploadScreen(
 
 @Composable
 internal fun ScreenTopBar(title: String, onBack: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TextButton(onClick = onBack) {
-            Text("← 뒤로", fontSize = 14.sp)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onBack) {
+                Text("← 이전", fontSize = 14.sp)
+            }
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 4.dp)
+            )
         }
-        Text(
-            text = title,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 4.dp)
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
         )
     }
 }
