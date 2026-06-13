@@ -33,8 +33,16 @@ data class ExerciseItem(
     val englishName: String,
     val reason: String,
     val caution: String,
-    val youtubeQuery: String
-)
+    val youtubeQuery: String,
+    // Fixed video id, if curated. Do not fill with unverified ids — when null,
+    // the UI falls back to a placeholder preview plus the YouTube search link.
+    val youtubeVideoId: String? = null
+) {
+    val youtubeUrl: String?
+        get() = youtubeVideoId?.let { "https://www.youtube.com/watch?v=$it" }
+    val youtubeThumbnailUrl: String?
+        get() = youtubeVideoId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
+}
 
 data class RecommendationRule(
     val id: String,
@@ -63,6 +71,11 @@ object HomecareDictionary {
 
     // Matches the backend recommendation_service thresholds (normalized landmark units).
     const val POSTURE_DIFF_THRESHOLD = 0.005
+
+    // Degree thresholds matching backend posture_analysis_service.
+    const val HEAD_TILT_DEGREE_THRESHOLD = 3.0
+    const val TRUNK_TILT_DEGREE_THRESHOLD = 3.0
+    const val FOOT_DIFF_DEGREE_THRESHOLD = 8.0
 
     // ── Posture flag ids ──
     const val FLAG_SHOULDER_LEFT_HIGHER = "shoulder_left_higher"
@@ -96,10 +109,10 @@ object HomecareDictionary {
         PostureFlag(FLAG_FORWARD_HEAD, "머리가 앞으로 나온 패턴 가능성이 있습니다"),
         PostureFlag(FLAG_ROUNDED_SHOULDER, "어깨가 안쪽으로 말린 패턴 가능성이 있습니다"),
         PostureFlag(FLAG_ANTERIOR_PELVIC_TILT, "골반 전방 경사 패턴 가능성이 있습니다"),
-        PostureFlag(FLAG_FOOT_ASYMMETRY, "발 방향에 좌우 차이가 관찰됩니다"),
-        PostureFlag(FLAG_NO_MAJOR_ISSUE, "사진상 큰 자세 불균형이 관찰되지 않습니다"),
-        PostureFlag(FLAG_SHOULDER_ASYMMETRY, "어깨 높이에 좌우 차이가 관찰됩니다"),
-        PostureFlag(FLAG_PELVIS_ASYMMETRY, "골반 높이에 좌우 차이가 관찰됩니다")
+        PostureFlag(FLAG_FOOT_ASYMMETRY, "발 방향이 양쪽으로 조금 다르게 보입니다"),
+        PostureFlag(FLAG_NO_MAJOR_ISSUE, "사진상 큰 자세 불균형은 없어 보입니다"),
+        PostureFlag(FLAG_SHOULDER_ASYMMETRY, "어깨 높이가 양쪽으로 살짝 달라 보입니다"),
+        PostureFlag(FLAG_PELVIS_ASYMMETRY, "골반 높이도 양쪽이 살짝 달라 보입니다")
     )
 
     val POSTURE_FLAGS_BY_ID: Map<String, PostureFlag> = POSTURE_FLAGS.associateBy { it.id }
@@ -528,18 +541,71 @@ object HomecareDictionary {
 
     // ─── Posture Flag Inference ───────────────────────────────────────────────
 
-    // The backend currently returns only absolute shoulder/hip height differences.
-    // Left/right direction and head/trunk/foot metrics are not in the API response,
-    // so only neutral asymmetry flags and no_major_posture_issue are inferred.
+    // Shoulder/hip use absolute height differences. Head/trunk/foot flags are
+    // only generated when the backend marks the metric as detected — never
+    // invented from missing data. Directional left/right for head and trunk
+    // follows the backend's signed angle (image-based).
     fun inferPostureFlags(result: AnalysisResponse?): Set<String> {
         if (result == null || !result.landmarkDetected) return emptySet()
         val flags = mutableSetOf<String>()
-        if (result.shoulderHeightDifference > POSTURE_DIFF_THRESHOLD) {
-            flags += FLAG_SHOULDER_ASYMMETRY
+
+        // Shoulder/hip: prefer the backend's signed direction enum;
+        // fall back to absolute differences for older backends.
+        when (result.shoulderDirection) {
+            "left_higher" -> flags += setOf(FLAG_SHOULDER_LEFT_HIGHER, FLAG_SHOULDER_ASYMMETRY)
+            "right_higher" -> flags += setOf(FLAG_SHOULDER_RIGHT_HIGHER, FLAG_SHOULDER_ASYMMETRY)
+            null -> if (result.shoulderHeightDifference > POSTURE_DIFF_THRESHOLD) {
+                flags += FLAG_SHOULDER_ASYMMETRY
+            }
         }
-        if (result.hipHeightDifference > POSTURE_DIFF_THRESHOLD) {
-            flags += FLAG_PELVIS_ASYMMETRY
+        when (result.hipDirection) {
+            "left_higher" -> flags += setOf(FLAG_PELVIS_LEFT_HIGHER, FLAG_PELVIS_ASYMMETRY)
+            "right_higher" -> flags += setOf(FLAG_PELVIS_RIGHT_HIGHER, FLAG_PELVIS_ASYMMETRY)
+            null -> if (result.hipHeightDifference > POSTURE_DIFF_THRESHOLD) {
+                flags += FLAG_PELVIS_ASYMMETRY
+            }
         }
+
+        // Head/trunk: direction enums; never generated when not detected.
+        when (result.headTiltDirection) {
+            "left" -> flags += FLAG_HEAD_LEFT_TILT
+            "right" -> flags += FLAG_HEAD_RIGHT_TILT
+            null -> {
+                val headAngle = result.headTiltAngleDegrees
+                if (result.headTiltDetected && headAngle != null &&
+                    kotlin.math.abs(headAngle) >= HEAD_TILT_DEGREE_THRESHOLD
+                ) {
+                    flags += if (headAngle > 0) FLAG_HEAD_RIGHT_TILT else FLAG_HEAD_LEFT_TILT
+                }
+            }
+        }
+        when (result.trunkTiltDirection) {
+            "left" -> flags += FLAG_TRUNK_LEFT_TILT
+            "right" -> flags += FLAG_TRUNK_RIGHT_TILT
+            null -> {
+                val trunkAngle = result.trunkCenterlineAngleDegrees
+                if (result.trunkCenterlineDetected && trunkAngle != null &&
+                    kotlin.math.abs(trunkAngle) >= TRUNK_TILT_DEGREE_THRESHOLD
+                ) {
+                    flags += if (trunkAngle > 0) FLAG_TRUNK_RIGHT_TILT else FLAG_TRUNK_LEFT_TILT
+                }
+            }
+        }
+
+        // Foot: asymmetry when a side is more outward, or when a difference
+        // is observed but direction is uncertain.
+        when (result.footDirectionStatus) {
+            "left_more_outward", "right_more_outward", "uncertain" -> flags += FLAG_FOOT_ASYMMETRY
+            null -> {
+                val footDiff = result.footDirectionDifferenceDegrees
+                if (result.footDirectionDetected && footDiff != null &&
+                    footDiff >= FOOT_DIFF_DEGREE_THRESHOLD
+                ) {
+                    flags += FLAG_FOOT_ASYMMETRY
+                }
+            }
+        }
+
         if (flags.isEmpty()) {
             flags += FLAG_NO_MAJOR_ISSUE
         }
@@ -592,6 +658,8 @@ object HomecareDictionary {
             "골반 높이에 좌우 차이가 있는 것으로 보인다"
         FLAG_NO_MAJOR_ISSUE in postureFlags ->
             "큰 불균형이 없어 보인다"
+        postureFlags.isNotEmpty() ->
+            "머리, 몸통 또는 발 정렬에 좌우 차이가 있을 수 있다"
         else ->
             "아직 자세 분석 결과를 확인하지 못했다"
     }

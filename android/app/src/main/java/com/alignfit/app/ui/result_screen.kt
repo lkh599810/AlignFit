@@ -198,16 +198,25 @@ private fun ResultCard(
             }
 
             MetricRow(
-                label = "어깨 높이 차이",
+                label = "어깨 좌우 높이",
                 value = "%.1f%%".format(result.shoulderHeightDifference * 100)
             )
             MetricRow(
-                label = "골반 높이 차이",
+                label = "골반 좌우 높이",
                 value = "%.1f%%".format(result.hipHeightDifference * 100)
             )
-            MetricRow(label = "머리 기울기", value = "추가 분석 예정")
-            MetricRow(label = "몸통 중심선", value = "추가 분석 예정")
-            MetricRow(label = "발 방향 차이", value = "추가 분석 예정")
+            MetricRow(
+                label = "머리 정렬",
+                value = tiltShortValue(result.headTiltDirection, result.headTiltAngleDegrees)
+            )
+            MetricRow(
+                label = "몸통 중심 정렬",
+                value = tiltShortValue(result.trunkTiltDirection, result.trunkCenterlineAngleDegrees)
+            )
+            MetricRow(
+                label = "발 방향 좌우 차이",
+                value = footShortValue(result.footDirectionStatus, result.footDirectionDifferenceDegrees)
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
             val dividerColor = MaterialTheme.colorScheme.outlineVariant
@@ -234,45 +243,136 @@ private fun ResultCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (!hasPostureIssue) {
-                Text(
-                    text = "사진상 자세에서는 큰 불균형이 없어 보입니다.",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "다만 통증이 지속된다면 자세 이외의 원인도 가능하므로 전문가 상담을 권장합니다.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    text = result.simpleSummary,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (hasPainSelection) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "선택한 통증 부위와 자세 분석 결과를 함께 보면, " +
-                                "특정 부위의 부담이 증가했을 가능성이 있습니다.",
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(10.dp),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            }
+            Text(
+                text = buildNaturalPostureSummary(result, hasPostureIssue, hasPainSelection),
+                fontSize = 13.sp,
+                color = if (hasPostureIssue) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.primary
+            )
         }
     }
+}
+
+// Short metric-table value for head/trunk tilt. Three base states:
+// direction null (older backend) → "추가 분석 예정"; "not_detected" → "분석 불가";
+// otherwise the directional short label with the absolute angle.
+private fun tiltShortValue(direction: String?, angleDegrees: Double?): String {
+    val angleText = angleDegrees?.let { " (%.1f°)".format(kotlin.math.abs(it)) } ?: ""
+    return when (direction) {
+        null -> "추가 분석 예정"
+        "not_detected" -> "분석 불가"
+        "balanced" -> "큰 차이 없음"
+        "left" -> "왼쪽 기울어짐$angleText"
+        "right" -> "오른쪽 기울어짐$angleText"
+        else -> direction
+    }
+}
+
+private fun footShortValue(status: String?, differenceDegrees: Double?): String {
+    val diffText = differenceDegrees?.let { " (%.1f°)".format(it) } ?: ""
+    return when (status) {
+        null -> "추가 분석 예정"
+        "not_detected" -> "분석 불가"
+        "balanced" -> "큰 차이 없음"
+        "left_more_outward" -> "왼쪽 더 벌어짐$diffText"
+        "right_more_outward" -> "오른쪽 더 벌어짐$diffText"
+        "uncertain" -> "차이 관찰 (불확실)$diffText"
+        else -> status
+    }
+}
+
+// Joins the backend's directional sentences (including not-detected
+// explanations) into the explanation paragraph. Returns null when the
+// backend is an older version without direction fields.
+private fun buildDirectionalExplanation(result: AnalysisResponse): String? {
+    if (result.shoulderDirection == null && result.headTiltDirection == null &&
+        result.trunkTiltDirection == null && result.footDirectionStatus == null
+    ) {
+        return null
+    }
+    val sentences = mutableListOf<String>()
+    if (result.shoulderDirection != null && result.shoulderDirection != "balanced") {
+        result.shoulderDirectionSummary?.takeIf { it.isNotEmpty() }?.let { sentences += it }
+    }
+    if (result.hipDirection != null && result.hipDirection != "balanced") {
+        result.hipDirectionSummary?.takeIf { it.isNotEmpty() }?.let { sentences += it }
+    }
+    if (result.headTiltDirection != null && result.headTiltDirection != "balanced") {
+        result.headTiltSummary?.takeIf { it.isNotEmpty() }?.let { sentences += it }
+    }
+    if (result.trunkTiltDirection != null && result.trunkTiltDirection != "balanced") {
+        result.trunkCenterlineSummary?.takeIf { it.isNotEmpty() }?.let { sentences += it }
+    }
+    if (result.footDirectionStatus != null && result.footDirectionStatus != "balanced") {
+        result.footDirectionSummary?.takeIf { it.isNotEmpty() }?.let { sentences += it }
+    }
+    return sentences.joinToString(" ").ifEmpty { null }
+}
+
+// Maps a normalized shoulder/hip height difference to a soft Korean adverb
+// describing how noticeable the difference looks.
+private fun severityToNaturalKorean(diff: Double): String = when {
+    diff < 0.015 -> "살짝"
+    diff < 0.03 -> "약간"
+    else -> "꽤"
+}
+
+// Maps a left/right direction enum value to a natural Korean side word.
+// Returns null for "balanced"/"not_detected"/unrecognized values.
+private fun directionToNaturalKorean(direction: String?): String? = when (direction) {
+    "left_higher", "left", "left_more_outward" -> "왼쪽"
+    "right_higher", "right", "right_more_outward" -> "오른쪽"
+    else -> null
+}
+
+// Builds the natural-language posture result paragraph shown in the result
+// card. Structure: overall impression -> specific posture findings ->
+// connection with selected pain areas -> caution sentence.
+private fun buildNaturalPostureSummary(
+    result: AnalysisResponse,
+    hasPostureIssue: Boolean,
+    hasPainSelection: Boolean
+): String {
+    val sentences = mutableListOf<String>()
+
+    if (!hasPostureIssue) {
+        sentences += "사진상 어깨와 골반 정렬은 큰 불균형 없이 비교적 안정적으로 보입니다."
+    } else {
+        val maxDiff = maxOf(result.shoulderHeightDifference, result.hipHeightDifference)
+        val severity = severityToNaturalKorean(maxDiff)
+        val overallSide = directionToNaturalKorean(result.shoulderDirection)
+            ?: directionToNaturalKorean(result.hipDirection)
+        sentences += if (overallSide != null) {
+            "사진상 전반적으로 ${overallSide}으로 균형이 ${severity} 치우쳐 보입니다."
+        } else {
+            "사진상 전반적으로 ${severity} 신경 쓰이는 부분이 보입니다."
+        }
+        sentences += buildDirectionalExplanation(result) ?: result.simpleSummary
+    }
+
+    if (hasPainSelection) {
+        sentences += if (hasPostureIssue) {
+            val painSide = directionToNaturalKorean(result.hipDirection)
+                ?: directionToNaturalKorean(result.shoulderDirection)
+            if (painSide != null) {
+                "선택한 통증 부위와 함께 보면, ${painSide}으로 치우친 부분에 부담이 더해졌을 가능성이 있습니다."
+            } else {
+                "선택한 통증 부위와 함께 보면, 해당 부위에 부담이 더해졌을 가능성이 있습니다."
+            }
+        } else {
+            "다만 선택한 통증과 함께 보면, 자세 외에도 운동량, 수면 자세, 오래 앉아 있는 습관 등이 영향을 줄 수 있습니다."
+        }
+    } else if (!hasPostureIssue) {
+        sentences += "다만 통증이 있다면 자세 외에도 운동량, 수면 자세, 오래 앉아 있는 습관 등이 영향을 줄 수 있습니다."
+    }
+
+    sentences += if (hasPostureIssue) {
+        "이 결과는 사진 한 장을 바탕으로 한 참고용 분석이며, 통증이 지속되면 전문가 상담을 권장합니다."
+    } else {
+        "통증이 계속되거나 심해지면 전문가와 상담해보는 것이 좋습니다."
+    }
+
+    return sentences.joinToString(" ")
 }
 
 @Composable

@@ -1,14 +1,24 @@
 package com.alignfit.app.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -16,6 +26,13 @@ import androidx.compose.ui.unit.sp
 import com.alignfit.app.data.ExerciseItem
 import com.alignfit.app.data.HomecareDictionary
 import com.alignfit.app.network.AnalysisResponse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+// Lightweight client for thumbnail fetching only (no logging interceptor needed).
+private val thumbnailHttpClient = OkHttpClient()
 
 // ─── Page 7: Exercise Recommendation ─────────────────────────────────────────
 
@@ -104,6 +121,16 @@ internal fun ExerciseRecommendationScreen(
 @Composable
 private fun ExerciseCard(exercise: ExerciseItem) {
     val context = LocalContext.current
+
+    fun openUrl(url: String) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+
+    val watchUrl = exercise.youtubeUrl
+    val thumbnailUrl = exercise.youtubeThumbnailUrl
+    val searchUrl = "https://www.youtube.com/results?search_query=" +
+        Uri.encode(exercise.youtubeQuery)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -120,7 +147,20 @@ private fun ExerciseCard(exercise: ExerciseItem) {
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // YouTube-style preview area: thumbnail when a fixed video id exists,
+            // otherwise a placeholder preview that opens the search results.
+            if (watchUrl != null && thumbnailUrl != null) {
+                YoutubeThumbnailPreview(
+                    thumbnailUrl = thumbnailUrl,
+                    onClick = { openUrl(watchUrl) }
+                )
+            } else {
+                PlaceholderPreview(onClick = { openUrl(searchUrl) })
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "추천 이유: ${exercise.reason}",
                 fontSize = 12.sp,
@@ -133,20 +173,94 @@ private fun ExerciseCard(exercise: ExerciseItem) {
                 color = MaterialTheme.colorScheme.error
             )
             Spacer(modifier = Modifier.height(10.dp))
+
             OutlinedButton(
-                onClick = {
-                    val query = Uri.encode(exercise.youtubeQuery)
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://www.youtube.com/results?search_query=$query")
-                    )
-                    context.startActivity(intent)
-                },
+                onClick = { openUrl(watchUrl ?: searchUrl) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("YouTube에서 검색하기", fontSize = 13.sp)
+                Text(
+                    text = if (watchUrl != null) "YouTube에서 영상 보기"
+                    else "YouTube에서 검색하기",
+                    fontSize = 13.sp
+                )
             }
         }
     }
+}
+
+@Composable
+private fun YoutubeThumbnailPreview(thumbnailUrl: String, onClick: () -> Unit) {
+    val thumbnail = rememberThumbnailBitmap(thumbnailUrl)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(170.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF202020))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (thumbnail != null) {
+            Image(
+                bitmap = thumbnail.asImageBitmap(),
+                contentDescription = "운동 영상 미리보기",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        // Play badge overlay (also serves as the loading placeholder)
+        Box(
+            modifier = Modifier
+                .background(Color(0xCCCC0000), RoundedCornerShape(8.dp))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(text = "▶", color = Color.White, fontSize = 18.sp)
+        }
+    }
+}
+
+@Composable
+private fun PlaceholderPreview(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(96.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "▶ YouTube", fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "탭하여 운동 영상 검색하기",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// Fetches a thumbnail with the existing OkHttp dependency (no Coil in this
+// project; per project rules new dependencies are not added without approval).
+@Composable
+private fun rememberThumbnailBitmap(url: String): Bitmap? {
+    var bitmap by remember(url) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(url) {
+        bitmap = withContext(Dispatchers.IO) {
+            runCatching {
+                val request = Request.Builder().url(url).build()
+                thumbnailHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    response.body?.bytes()?.let {
+                        BitmapFactory.decodeByteArray(it, 0, it.size)
+                    }
+                }
+            }.getOrNull()
+        }
+    }
+    return bitmap
 }
