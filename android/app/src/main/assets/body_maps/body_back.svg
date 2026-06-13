@@ -2,35 +2,38 @@
 <!--
   AlignFit body map: back view.
   Screen-left = the user's own left side (natural when viewed from behind).
-  Each selectable region is a <polygon> with a unique id.
-  Ellipses are decorative (head) and not selectable.
+  Each selectable region is a <polygon> with a unique id and its own fill attribute
+  so regions can be recolored individually. Ellipses are decorative (head) and not
+  selectable. Adjacent regions share edge coordinates so there are no tap gaps.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="440" viewBox="0 0 200 440">
   <title>AlignFit back body map</title>
   <g fill="#C9CED6" stroke="#8E97A3" stroke-width="1.5" stroke-linejoin="round">
-    <ellipse cx="100" cy="28" rx="20" ry="24"/>
-    <polygon id="back_neck" points="88,54 112,54 112,72 88,72"/>
-    <polygon id="back_left_shoulder" points="50,84 88,72 88,98 56,104"/>
-    <polygon id="back_right_shoulder" points="112,72 150,84 144,104 112,98"/>
-    <polygon id="back_upper_back" points="64,98 136,98 134,148 66,148"/>
-    <polygon id="back_lower_back" points="66,148 134,148 133,178 67,178"/>
-    <polygon id="back_left_waist" points="67,178 100,178 100,202 68,202"/>
-    <polygon id="back_right_waist" points="100,178 133,178 132,202 100,202"/>
-    <polygon id="back_left_glute" points="68,202 100,202 100,250 66,250"/>
-    <polygon id="back_right_glute" points="100,202 132,202 134,250 100,250"/>
-    <polygon id="back_left_upper_arm" points="34,104 56,98 58,174 38,176"/>
-    <polygon id="back_right_upper_arm" points="144,98 166,104 162,176 142,174"/>
-    <polygon id="back_left_forearm" points="38,176 58,174 56,242 40,242"/>
-    <polygon id="back_right_forearm" points="142,174 162,176 160,242 144,242"/>
-    <polygon id="back_left_hand_wrist" points="38,242 56,242 56,278 36,278"/>
-    <polygon id="back_right_hand_wrist" points="144,242 162,242 164,278 144,278"/>
-    <polygon id="back_left_back_thigh" points="66,250 98,250 96,330 70,330"/>
-    <polygon id="back_right_back_thigh" points="102,250 134,250 130,330 104,330"/>
-    <polygon id="back_left_knee" points="70,330 96,330 94,360 72,360"/>
-    <polygon id="back_right_knee" points="104,330 130,330 128,360 106,360"/>
-    <polygon id="back_left_calf" points="72,360 94,360 90,414 76,414"/>
-    <polygon id="back_right_calf" points="106,360 128,360 124,414 110,414"/>
-    <polygon id="back_left_ankle_foot" points="74,414 92,414 92,436 66,436"/>
-    <polygon id="back_right_ankle_foot" points="108,414 126,414 134,436 108,436"/>
+    <ellipse cx="100" cy="30" rx="17" ry="22" fill="#C9CED6"/>
+    <polygon id="back_neck" fill="#C9CED6" points="91,50 109,50 111,68 89,68"/>
+    <polygon id="back_left_shoulder" fill="#C9CED6" points="89,68 89,96 66,98 52,94 54,84 72,72"/>
+    <polygon id="back_right_shoulder" fill="#C9CED6" points="111,68 128,72 146,84 148,94 134,98 111,96"/>
+    <polygon id="back_left_upper_back" fill="#C9CED6" points="66,98 89,96 89,68 100,68 100,148 70,148 68,124"/>
+    <polygon id="back_right_upper_back" fill="#C9CED6" points="100,68 111,68 111,96 134,98 132,124 130,148 100,148"/>
+    <polygon id="back_left_lower_back" fill="#C9CED6" points="70,148 100,148 100,180 73,180 72,166"/>
+    <polygon id="back_right_lower_back" fill="#C9CED6" points="100,148 130,148 128,166 127,180 100,180"/>
+    <polygon id="back_left_waist" fill="#C9CED6" points="73,180 100,180 100,202 71,202 72,190"/>
+    <polygon id="back_right_waist" fill="#C9CED6" points="100,180 127,180 128,190 129,202 100,202"/>
+    <polygon id="back_left_glute" fill="#C9CED6" points="71,202 100,202 100,252 72,252 66,226"/>
+    <polygon id="back_right_glute" fill="#C9CED6" points="100,202 129,202 134,226 128,252 100,252"/>
+    <polygon id="back_left_upper_arm" fill="#C9CED6" points="52,94 64,100 62,136 58,166 44,166 42,130 46,102"/>
+    <polygon id="back_right_upper_arm" fill="#C9CED6" points="148,94 154,102 158,130 156,166 142,166 138,136 136,100"/>
+    <polygon id="back_left_forearm" fill="#C9CED6" points="44,166 58,166 55,200 53,230 46,230 43,200"/>
+    <polygon id="back_right_forearm" fill="#C9CED6" points="142,166 156,166 157,200 154,230 147,230 145,200"/>
+    <polygon id="back_left_hand_wrist" fill="#C9CED6" points="46,230 53,230 56,242 55,262 49,270 43,262 42,242"/>
+    <polygon id="back_right_hand_wrist" fill="#C9CED6" points="147,230 154,230 158,242 157,262 151,270 145,262 144,242"/>
+    <polygon id="back_left_back_thigh" fill="#C9CED6" points="72,252 100,252 98,268 95,324 75,324 70,288"/>
+    <polygon id="back_right_back_thigh" fill="#C9CED6" points="100,252 128,252 130,288 125,324 105,324 102,268"/>
+    <polygon id="back_left_knee" fill="#C9CED6" points="75,324 95,324 93,354 77,354"/>
+    <polygon id="back_right_knee" fill="#C9CED6" points="105,324 125,324 123,354 107,354"/>
+    <polygon id="back_left_calf" fill="#C9CED6" points="77,354 93,354 94,372 89,406 79,406 74,372"/>
+    <polygon id="back_right_calf" fill="#C9CED6" points="107,354 123,354 126,372 121,406 111,406 106,372"/>
+    <polygon id="back_left_ankle_foot" fill="#C9CED6" points="79,406 89,406 91,430 65,430 67,420 78,414"/>
+    <polygon id="back_right_ankle_foot" fill="#C9CED6" points="111,406 121,406 122,414 133,420 135,430 109,430"/>
   </g>
 </svg>

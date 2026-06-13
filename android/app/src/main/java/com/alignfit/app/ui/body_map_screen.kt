@@ -163,10 +163,16 @@ fun BodyMapSelectionScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "통증이 느껴지는 부위를 그림에서 직접 탭하여 표시해 주세요. 여러 부위를 선택할 수 있습니다.",
+                text = "그림에서 불편한 부위를 직접 선택해 주세요.",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = "여러 부위를 선택할 수 있고, 다시 탭하면 해제됩니다.",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
             )
 
             TabRow(selectedTabIndex = currentView.ordinal) {
@@ -198,10 +204,21 @@ fun BodyMapSelectionScreen(
                     modifier = Modifier.padding(16.dp)
                 )
             } else {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
                 Canvas(
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
+                        .fillMaxWidth(0.78f)
                         .align(Alignment.CenterHorizontally)
+                        .padding(vertical = 12.dp)
                         .aspectRatio(map.viewBoxWidth / map.viewBoxHeight)
                         .pointerInput(currentView) {
                             detectTapGestures { tap ->
@@ -255,6 +272,7 @@ fun BodyMapSelectionScreen(
                             )
                         }
                     }
+                }
                 }
             }
 

@@ -40,6 +40,14 @@ internal fun ConsultationGuideScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            Text(
+                text = "진료나 상담을 받을 때는 ‘어느 부위가, 언제부터, 어떤 동작에서 더 아픈지’를 " +
+                    "먼저 이야기하면 좋습니다.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 14.dp)
+            )
+
             // Selected pain items
             if (selectedPainIds.isNotEmpty()) {
                 GuideCard(title = "선택한 통증 부위") {

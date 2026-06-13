@@ -2,28 +2,30 @@
 <!--
   AlignFit body map: left side view (the person faces the left edge of the image).
   Front of the body = smaller x values, back of the body = larger x values.
-  Each selectable region is a <polygon> with a unique id.
-  Ellipses are decorative (head) and not selectable.
+  Each selectable region is a <polygon> with a unique id and its own fill attribute
+  so regions can be recolored individually. Ellipses are decorative (head) and not
+  selectable. The arm overlaps the torso and is listed after it, so taps on the
+  arm area select the arm (hit testing picks the last matching region).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="440" viewBox="0 0 200 440">
   <title>AlignFit left side body map</title>
   <g fill="#C9CED6" stroke="#8E97A3" stroke-width="1.5" stroke-linejoin="round">
-    <ellipse cx="96" cy="28" rx="20" ry="24"/>
-    <polygon id="left_side_neck" points="88,54 110,54 110,72 88,72"/>
-    <polygon id="left_side_shoulder" points="78,72 126,72 126,102 78,102"/>
-    <polygon id="left_side_chest" points="68,102 88,102 88,150 70,150"/>
-    <polygon id="left_side_abdomen" points="70,150 88,150 88,208 70,208"/>
-    <polygon id="left_side_upper_back" points="112,102 130,102 128,150 112,150"/>
-    <polygon id="left_side_lower_back" points="112,150 128,150 127,188 112,188"/>
-    <polygon id="left_side_waist" points="112,188 127,188 126,208 112,208"/>
-    <polygon id="left_side_upper_arm" points="88,102 112,102 112,174 88,174"/>
-    <polygon id="left_side_forearm" points="88,174 112,174 110,242 90,242"/>
-    <polygon id="left_side_hand_wrist" points="90,242 110,242 110,278 90,278"/>
-    <polygon id="left_side_hip" points="68,208 100,208 100,252 72,252"/>
-    <polygon id="left_side_glute" points="100,208 126,208 130,252 100,252"/>
-    <polygon id="left_side_thigh" points="72,252 130,252 124,330 76,330"/>
-    <polygon id="left_side_knee" points="76,330 124,330 118,360 80,360"/>
-    <polygon id="left_side_calf" points="80,360 118,360 112,414 84,414"/>
-    <polygon id="left_side_ankle_foot" points="84,414 112,414 112,436 58,436 58,426 84,420"/>
+    <ellipse cx="98" cy="30" rx="16" ry="21" fill="#C9CED6"/>
+    <polygon id="left_side_neck" fill="#C9CED6" points="90,50 108,52 110,70 88,68"/>
+    <polygon id="left_side_shoulder" fill="#C9CED6" points="88,68 110,70 126,76 128,100 78,100 80,76"/>
+    <polygon id="left_side_chest" fill="#C9CED6" points="70,100 92,100 92,152 72,152 66,120"/>
+    <polygon id="left_side_abdomen" fill="#C9CED6" points="72,152 92,152 92,206 74,206 70,178"/>
+    <polygon id="left_side_upper_back" fill="#C9CED6" points="108,100 126,100 131,118 128,152 108,152"/>
+    <polygon id="left_side_lower_back" fill="#C9CED6" points="105,152 128,152 122,170 124,186 105,186"/>
+    <polygon id="left_side_waist" fill="#C9CED6" points="105,186 124,186 126,206 105,206"/>
+    <polygon id="left_side_upper_arm" fill="#C9CED6" points="88,100 112,100 110,140 106,172 90,172 88,136"/>
+    <polygon id="left_side_forearm" fill="#C9CED6" points="90,172 106,172 104,204 101,236 93,236 91,204"/>
+    <polygon id="left_side_hand_wrist" fill="#C9CED6" points="93,236 101,236 104,248 102,268 96,274 91,266 91,248"/>
+    <polygon id="left_side_hip" fill="#C9CED6" points="74,206 100,206 100,252 76,252 70,228"/>
+    <polygon id="left_side_glute" fill="#C9CED6" points="100,206 126,206 133,226 128,250 100,252"/>
+    <polygon id="left_side_thigh" fill="#C9CED6" points="76,252 128,250 124,290 118,326 82,326 76,290"/>
+    <polygon id="left_side_knee" fill="#C9CED6" points="82,326 118,326 114,356 84,356"/>
+    <polygon id="left_side_calf" fill="#C9CED6" points="84,356 114,356 118,374 110,408 88,408 84,374"/>
+    <polygon id="left_side_ankle_foot" fill="#C9CED6" points="88,408 110,408 110,430 56,430 56,422 86,416"/>
   </g>
 </svg>

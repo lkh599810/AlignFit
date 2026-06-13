@@ -87,7 +87,14 @@ internal fun ExerciseRecommendationScreen(
                 text = "추천 운동",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                modifier = Modifier.padding(vertical = 6.dp)
+                modifier = Modifier.padding(top = 6.dp)
+            )
+            Text(
+                text = "선택한 통증 부위와 자세 분석 결과를 함께 고려해, " +
+                    "먼저 부담이 적은 홈케어 운동부터 추천합니다.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
             )
 
             recommendations.exercises.forEach { exercise ->
@@ -157,7 +164,11 @@ private fun ExerciseCard(exercise: ExerciseItem) {
                     onClick = { openUrl(watchUrl) }
                 )
             } else {
-                PlaceholderPreview(onClick = { openUrl(searchUrl) })
+                PlaceholderPreview(
+                    exerciseName = exercise.koreanName,
+                    searchQuery = exercise.youtubeQuery,
+                    onClick = { openUrl(searchUrl) }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -180,8 +191,8 @@ private fun ExerciseCard(exercise: ExerciseItem) {
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = if (watchUrl != null) "YouTube에서 영상 보기"
-                    else "YouTube에서 검색하기",
+                    text = if (watchUrl != null) "${exercise.koreanName} 영상 보기"
+                    else "${exercise.koreanName} 영상 검색하기",
                     fontSize = 13.sp
                 )
             }
@@ -221,11 +232,15 @@ private fun YoutubeThumbnailPreview(thumbnailUrl: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PlaceholderPreview(onClick: () -> Unit) {
+private fun PlaceholderPreview(
+    exerciseName: String,
+    searchQuery: String,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(96.dp)
+            .height(110.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { onClick() },
@@ -236,8 +251,13 @@ private fun PlaceholderPreview(onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "탭하여 운동 영상 검색하기",
+                text = "탭하면 ‘$exerciseName’ 영상을 검색합니다",
                 fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "검색어: $searchQuery",
+                fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

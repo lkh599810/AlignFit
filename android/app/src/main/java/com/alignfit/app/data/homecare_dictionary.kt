@@ -217,8 +217,10 @@ object HomecareDictionary {
 
     private val SVG_BODY_REGION_IDS = listOf(
         // front
-        "front_neck", "front_left_shoulder", "front_right_shoulder", "front_chest",
-        "front_abdomen", "front_left_upper_arm", "front_right_upper_arm",
+        "front_neck", "front_left_shoulder", "front_right_shoulder",
+        "front_left_chest", "front_right_chest",
+        "front_left_abdomen", "front_right_abdomen",
+        "front_left_upper_arm", "front_right_upper_arm",
         "front_left_forearm", "front_right_forearm",
         "front_left_hand_wrist", "front_right_hand_wrist",
         "front_left_hip", "front_right_hip",
@@ -228,7 +230,8 @@ object HomecareDictionary {
         "front_left_ankle_foot", "front_right_ankle_foot",
         // back
         "back_neck", "back_left_shoulder", "back_right_shoulder",
-        "back_upper_back", "back_lower_back",
+        "back_left_upper_back", "back_right_upper_back",
+        "back_left_lower_back", "back_right_lower_back",
         "back_left_waist", "back_right_waist",
         "back_left_glute", "back_right_glute",
         "back_left_upper_arm", "back_right_upper_arm",
@@ -347,6 +350,38 @@ object HomecareDictionary {
             youtubeQuery = "calf stretch 종아리 스트레칭"
         ),
         ExerciseItem(
+            id = "clamshell",
+            koreanName = "조개 운동 (클램셸)",
+            englishName = "Clamshell",
+            reason = "엉덩이 옆쪽(중둔근) 근육을 활성화해 골반 안정에 도움이 될 가능성이 있습니다.",
+            caution = "골반이 뒤로 넘어가지 않게 고정하고 엉덩이 힘으로 무릎을 여세요.",
+            youtubeQuery = "clamshell hip exercise 클램쉘 운동"
+        ),
+        ExerciseItem(
+            id = "quad_strengthening",
+            koreanName = "허벅지 앞 근력 운동",
+            englishName = "Quadriceps Strengthening",
+            reason = "허벅지 앞쪽 근육을 강화해 무릎 주변 부담 완화에 도움이 될 가능성이 있습니다.",
+            caution = "무릎에 통증이 느껴지면 가동 범위를 줄이고 천천히 진행하세요.",
+            youtubeQuery = "quadriceps strengthening exercise 허벅지 앞 근력 운동"
+        ),
+        ExerciseItem(
+            id = "ankle_mobility",
+            koreanName = "발목 가동성 운동",
+            englishName = "Ankle Mobility",
+            reason = "발목 관절의 움직임 범위를 넓혀 종아리·발목 부담 완화에 도움이 될 가능성이 있습니다.",
+            caution = "통증이 느껴지는 범위까지 무리해서 움직이지 마세요.",
+            youtubeQuery = "ankle mobility exercise 발목 가동성 운동"
+        ),
+        ExerciseItem(
+            id = "single_leg_balance",
+            koreanName = "한 발 균형 잡기",
+            englishName = "Single Leg Balance",
+            reason = "한 발로 서는 균형 훈련으로 발목 안정성과 하체 좌우 균형에 도움이 될 가능성이 있습니다.",
+            caution = "넘어지지 않도록 벽이나 의자를 가까이 두고 진행하세요.",
+            youtubeQuery = "single leg balance exercise 한 발 균형 운동"
+        ),
+        ExerciseItem(
             id = "neck_side_stretch",
             koreanName = "목 옆 스트레칭",
             englishName = "Neck Side Stretch",
@@ -369,24 +404,14 @@ object HomecareDictionary {
         exerciseIds = listOf("glute_bridge", "dead_bug", "bird_dog", "thoracic_extension")
     )
 
+    // Rules are matched against selected pain checkboxes, selected body-map
+    // regions, and inferred posture flags. Explicit user selections (pain / body
+    // map) are given higher priority than posture flags inferred from the photo,
+    // so the chosen pain area meaningfully drives the exercise list.
     val RULES = listOf(
         RecommendationRule(
-            id = "low_back_core_stability",
-            priority = 90,
-            painIds = listOf("low_back_left", "low_back_right"),
-            svgRegionIds = listOf(
-                "back_lower_back", "back_left_waist", "back_right_waist",
-                "left_side_lower_back", "right_side_lower_back",
-                "left_side_waist", "right_side_waist", "front_abdomen"
-            ),
-            feedbackTitle = "허리 주변 부담 가능성",
-            feedbackBody = "선택하신 부위로 보아 허리 주변에 부담이 쌓였을 가능성이 있습니다. " +
-                "허리에 부담이 적은 코어 안정화 운동부터 가볍게 시작하는 것을 권장합니다.",
-            exerciseIds = listOf("dead_bug", "bird_dog", "glute_bridge", "hip_flexor_stretch")
-        ),
-        RecommendationRule(
             id = "shoulder_neck_pattern",
-            priority = 85,
+            priority = 90,
             painIds = listOf(
                 "shoulder_left_front", "shoulder_left_back",
                 "shoulder_right_front", "shoulder_right_back"
@@ -396,7 +421,8 @@ object HomecareDictionary {
                 "front_left_shoulder", "front_right_shoulder",
                 "back_left_shoulder", "back_right_shoulder",
                 "left_side_shoulder", "right_side_shoulder",
-                "front_chest", "back_upper_back",
+                "front_left_chest", "front_right_chest",
+                "back_left_upper_back", "back_right_upper_back",
                 "left_side_upper_back", "right_side_upper_back",
                 "left_side_chest", "right_side_chest"
             ),
@@ -404,30 +430,34 @@ object HomecareDictionary {
                 FLAG_ROUNDED_SHOULDER, FLAG_FORWARD_HEAD,
                 FLAG_HEAD_LEFT_TILT, FLAG_HEAD_RIGHT_TILT
             ),
-            feedbackTitle = "어깨·목 주변 긴장 가능성",
-            feedbackBody = "어깨와 목 주변 근육이 긴장되어 있을 가능성이 있습니다. " +
-                "가슴을 펴고 날개뼈를 모으는 가벼운 운동과 스트레칭을 권장합니다.",
+            feedbackTitle = "어깨·목 부위 맞춤 추천",
+            feedbackBody = "선택하신 어깨·목 부위와 자세 결과를 함께 보면 이 부위 근육이 긴장되어 있을 가능성이 있습니다. " +
+                "그래서 목 정렬을 돕는 턱 당기기, 굽은 어깨를 펴는 가슴 스트레칭과 견갑골 모으기, " +
+                "등 윗부분을 펴는 흉추 신전 운동을 골랐습니다.",
             exerciseIds = listOf(
-                "scapular_retraction", "pec_stretch", "chin_tuck",
-                "thoracic_extension", "neck_side_stretch"
+                "chin_tuck", "pec_stretch", "scapular_retraction", "thoracic_extension"
             )
         ),
         RecommendationRule(
-            id = "shoulder_height_asymmetry_care",
-            priority = 80,
-            postureFlags = listOf(
-                FLAG_SHOULDER_ASYMMETRY, FLAG_SHOULDER_LEFT_HIGHER, FLAG_SHOULDER_RIGHT_HIGHER
+            id = "low_back_core_stability",
+            priority = 88,
+            painIds = listOf("low_back_left", "low_back_right"),
+            svgRegionIds = listOf(
+                "back_left_lower_back", "back_right_lower_back",
+                "back_left_waist", "back_right_waist",
+                "left_side_lower_back", "right_side_lower_back",
+                "left_side_waist", "right_side_waist",
+                "front_left_abdomen", "front_right_abdomen"
             ),
-            feedbackTitle = "어깨 높이 차이 관찰",
-            feedbackBody = "사진상 어깨 높이에 좌우 차이가 있어 보입니다. 한쪽으로 가방을 메거나 " +
-                "기울여 앉는 습관이 영향을 줄 가능성이 있습니다. 상체 균형 운동을 권장합니다.",
-            exerciseIds = listOf(
-                "scapular_retraction", "thoracic_extension", "pec_stretch", "side_plank"
-            )
+            feedbackTitle = "허리·코어 부위 맞춤 추천",
+            feedbackBody = "선택하신 허리·옆구리 부위로 보아 허리 주변에 부담이 쌓였을 가능성이 있습니다. " +
+                "그래서 허리에 부담이 적은 코어 안정화 운동인 데드버그·버드독과, " +
+                "몸통 측면을 잡아주는 사이드 플랭크, 엉덩이 들기를 골랐습니다.",
+            exerciseIds = listOf("dead_bug", "bird_dog", "side_plank", "glute_bridge")
         ),
         RecommendationRule(
-            id = "pelvis_hip_pattern",
-            priority = 78,
+            id = "hip_pelvis_pattern",
+            priority = 86,
             painIds = listOf(
                 "hip_pelvis_left_front", "hip_pelvis_left_back",
                 "hip_pelvis_right_front", "hip_pelvis_right_back"
@@ -442,43 +472,43 @@ object HomecareDictionary {
                 FLAG_PELVIS_ASYMMETRY, FLAG_PELVIS_LEFT_HIGHER,
                 FLAG_PELVIS_RIGHT_HIGHER, FLAG_ANTERIOR_PELVIC_TILT
             ),
-            feedbackTitle = "골반 주변 불균형 가능성",
-            feedbackBody = "골반 높이 차이 또는 고관절 주변 부담이 관찰될 가능성이 있습니다. " +
-                "골반 주변 근육을 풀고 안정화하는 운동을 권장합니다.",
-            exerciseIds = listOf("hip_flexor_stretch", "glute_bridge", "side_plank", "bird_dog")
+            feedbackTitle = "골반·고관절 부위 맞춤 추천",
+            feedbackBody = "선택하신 골반·고관절 부위와 자세 결과를 함께 보면 골반 주변 근육의 균형이 흐트러졌을 가능성이 있습니다. " +
+                "그래서 엉덩이 근육을 강화하는 엉덩이 들기와 옆쪽 엉덩이를 깨우는 클램셸, " +
+                "고관절 앞쪽을 푸는 스트레칭, 골반을 잡아주는 사이드 플랭크를 골랐습니다.",
+            exerciseIds = listOf("glute_bridge", "clamshell", "hip_flexor_stretch", "side_plank")
         ),
         RecommendationRule(
-            id = "trunk_alignment_care",
-            priority = 70,
-            postureFlags = listOf(FLAG_TRUNK_LEFT_TILT, FLAG_TRUNK_RIGHT_TILT),
-            feedbackTitle = "몸통 중심선 기울어짐 가능성",
-            feedbackBody = "몸통 중심선이 한쪽으로 기울어 보일 가능성이 있습니다. " +
-                "몸통 측면과 코어를 함께 강화하는 운동을 권장합니다.",
-            exerciseIds = listOf("side_plank", "dead_bug", "bird_dog")
-        ),
-        RecommendationRule(
-            id = "thigh_knee_pattern",
-            priority = 65,
-            painIds = listOf(
-                "thigh_left_front", "thigh_left_back",
-                "thigh_right_front", "thigh_right_back"
-            ),
+            id = "thigh_front_knee_pattern",
+            priority = 84,
+            painIds = listOf("thigh_left_front", "thigh_right_front"),
             svgRegionIds = listOf(
                 "front_left_front_thigh", "front_right_front_thigh",
-                "back_left_back_thigh", "back_right_back_thigh",
                 "left_side_thigh", "right_side_thigh",
                 "front_left_knee", "front_right_knee",
                 "back_left_knee", "back_right_knee",
                 "left_side_knee", "right_side_knee"
             ),
-            feedbackTitle = "허벅지·무릎 주변 부담 가능성",
-            feedbackBody = "허벅지나 무릎 주변에 부담이 쌓였을 가능성이 있습니다. " +
-                "허벅지 앞뒤 근육을 풀고 엉덩이 근육을 강화하는 운동을 권장합니다.",
-            exerciseIds = listOf("hip_flexor_stretch", "hamstring_stretch", "glute_bridge")
+            feedbackTitle = "허벅지 앞·무릎 부위 맞춤 추천",
+            feedbackBody = "선택하신 허벅지 앞·무릎 부위로 보아 무릎 주변을 받쳐주는 근력이 필요할 가능성이 있습니다. " +
+                "그래서 허벅지 앞 근력 운동과 엉덩이 들기, 옆쪽 엉덩이를 강화하는 클램셸을 골랐습니다.",
+            exerciseIds = listOf("quad_strengthening", "glute_bridge", "clamshell")
+        ),
+        RecommendationRule(
+            id = "thigh_back_pattern",
+            priority = 83,
+            painIds = listOf("thigh_left_back", "thigh_right_back"),
+            svgRegionIds = listOf(
+                "back_left_back_thigh", "back_right_back_thigh"
+            ),
+            feedbackTitle = "허벅지 뒤 부위 맞춤 추천",
+            feedbackBody = "선택하신 허벅지 뒤 부위로 보아 햄스트링이 긴장되어 있을 가능성이 있습니다. " +
+                "그래서 허벅지 뒤를 늘려주는 햄스트링 스트레칭과, 골반·허리를 안정시키는 버드독, 엉덩이 들기를 골랐습니다.",
+            exerciseIds = listOf("hamstring_stretch", "bird_dog", "glute_bridge")
         ),
         RecommendationRule(
             id = "calf_ankle_pattern",
-            priority = 60,
+            priority = 82,
             painIds = listOf(
                 "calf_left_front", "calf_left_back", "calf_right_front", "calf_right_back",
                 "ankle_left_front", "ankle_left_back", "ankle_right_front", "ankle_right_back"
@@ -492,14 +522,14 @@ object HomecareDictionary {
                 "left_side_ankle_foot", "right_side_ankle_foot"
             ),
             postureFlags = listOf(FLAG_FOOT_ASYMMETRY),
-            feedbackTitle = "종아리·발목 주변 긴장 가능성",
-            feedbackBody = "종아리나 발목 주변이 긴장되어 있을 가능성이 있습니다. " +
-                "종아리 스트레칭과 하체 뒤쪽 이완 운동을 권장합니다.",
-            exerciseIds = listOf("calf_stretch", "hamstring_stretch", "glute_bridge")
+            feedbackTitle = "종아리·발목 부위 맞춤 추천",
+            feedbackBody = "선택하신 종아리·발목 부위와 발 방향 결과를 함께 보면 발목 주변이 뻣뻣하거나 좌우 균형이 흐트러졌을 가능성이 있습니다. " +
+                "그래서 종아리를 늘려주는 스트레칭과 발목 가동성 운동, 한 발 균형 잡기를 골랐습니다.",
+            exerciseIds = listOf("calf_stretch", "ankle_mobility", "single_leg_balance")
         ),
         RecommendationRule(
             id = "arm_posture_support",
-            priority = 55,
+            priority = 60,
             svgRegionIds = listOf(
                 "front_left_upper_arm", "front_right_upper_arm",
                 "back_left_upper_arm", "back_right_upper_arm",
@@ -511,10 +541,35 @@ object HomecareDictionary {
                 "left_side_forearm", "right_side_forearm",
                 "left_side_hand_wrist", "right_side_hand_wrist"
             ),
-            feedbackTitle = "팔·손목 주변 불편감",
-            feedbackBody = "팔이나 손목 불편감은 어깨와 상체 자세의 영향일 가능성도 있습니다. " +
-                "어깨 주변을 함께 관리하는 것을 권장합니다.",
+            feedbackTitle = "팔·손목 부위 참고 추천",
+            feedbackBody = "선택하신 팔·손목 불편감은 어깨와 상체 자세의 영향일 가능성도 있습니다. " +
+                "그래서 어깨 주변을 함께 관리하도록 견갑골 모으기·가슴 스트레칭·흉추 신전 운동을 골랐습니다.",
             exerciseIds = listOf("scapular_retraction", "pec_stretch", "thoracic_extension")
+        ),
+        // ── Posture-flag-only rules (inferred from the photo, not user-selected).
+        //    Lower priority so an explicit pain selection always leads. ──
+        RecommendationRule(
+            id = "shoulder_asymmetry_posture",
+            priority = 55,
+            postureFlags = listOf(
+                FLAG_SHOULDER_ASYMMETRY, FLAG_SHOULDER_LEFT_HIGHER, FLAG_SHOULDER_RIGHT_HIGHER
+            ),
+            feedbackTitle = "어깨 높이 좌우 차이",
+            feedbackBody = "사진 분석에서 어깨 높이가 양쪽이 조금 달라 보입니다. 한쪽으로 가방을 메거나 " +
+                "기울여 앉는 습관이 영향을 줄 수 있어, 상체 균형을 잡아주는 견갑골 모으기·흉추 신전·" +
+                "가슴 스트레칭과 사이드 플랭크를 골랐습니다.",
+            exerciseIds = listOf(
+                "scapular_retraction", "thoracic_extension", "pec_stretch", "side_plank"
+            )
+        ),
+        RecommendationRule(
+            id = "trunk_alignment_posture",
+            priority = 50,
+            postureFlags = listOf(FLAG_TRUNK_LEFT_TILT, FLAG_TRUNK_RIGHT_TILT),
+            feedbackTitle = "몸통 중심선 기울어짐",
+            feedbackBody = "사진 분석에서 몸통 중심선이 한쪽으로 기울어 보일 가능성이 있습니다. " +
+                "그래서 몸통 측면과 코어를 함께 잡아주는 사이드 플랭크·데드버그·버드독을 골랐습니다.",
+            exerciseIds = listOf("side_plank", "dead_bug", "bird_dog")
         ),
         DEFAULT_RULE
     )
@@ -686,7 +741,7 @@ object HomecareDictionary {
                 "현재 뚜렷한 통증 부위를 표시하지는 않았지만, 자세 관리에 관심이 있습니다."
         }
 
-        return "$opening 사진상 자세 분석에서는 ${posturePart}는 안내를 받았습니다. " +
-            "통증이 언제부터 시작되었고 어떤 동작에서 심해지는지 상담받고 싶습니다."
+        return "$opening 사진 기반 자세 분석에서는 ${posturePart}는 안내를 받았습니다. " +
+            "통증이 어떤 동작에서 심해지는지, 단순 근육 긴장인지 추가 평가가 필요한지 상담받고 싶습니다."
     }
 }
