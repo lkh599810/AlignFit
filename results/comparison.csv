@@ -1,0 +1,8 @@
+model,task,accuracy,precision_macro,recall_macro,f1_macro,infer_ms_per_sample,model_size_kb,notes
+baseline_rule,binary_correctness,0.5125,0.5126984126984127,0.5125,0.5105882352941176,0.00024,0.0,asym>32.74 or rom<19.07
+baseline_centroid,exercise_10class,1.0,1.0,1.0,1.0,0.00606,0.0,nearest centroid
+mlp,binary_correctness,0.6975,0.7037395228884591,0.6975,0.6951661155723508,0.00274,175.9,params=43458; val_acc=0.877
+cnn1d,binary_correctness,0.71,0.71002100210021,0.71,0.7099927498187455,0.03238,89.5,params=21218; val_acc=0.650
+mlp,exercise_10class,1.0,1.0,1.0,1.0,0.00258,177.8,params=43978; val_acc=1.000
+cnn1d,exercise_10class,1.0,1.0,1.0,1.0,0.03141,91.5,params=21738; val_acc=1.000
+mlp_tuned,binary_correctness,0.6975,0.7037395228884591,0.6975,0.6951661155723508,0.00276,141.8,params=34690; val_acc=0.870

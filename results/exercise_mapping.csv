@@ -1,0 +1,11 @@
+exercise_id,exercise_index,exercise_name,body_region,alignfit_pattern
+m01,0,Deep squat,lower_trunk,lower_body_alignment
+m02,1,Hurdle step,lower_trunk,single_leg_balance
+m03,2,Inline lunge,lower_trunk,lower_body_alignment
+m04,3,Side lunge,lower_trunk,lateral_pelvis_stability
+m05,4,Sit to stand,lower_trunk,trunk_hip_strength
+m06,5,Standing active straight leg raise,lower_trunk,hip_mobility
+m07,6,Standing shoulder abduction,upper_shoulder,shoulder_asymmetry
+m08,7,Standing shoulder extension,upper_shoulder,shoulder_mobility
+m09,8,Standing shoulder internal-external rotation,upper_shoulder,shoulder_rotation
+m10,9,Standing shoulder scaption,upper_shoulder,shoulder_asymmetry

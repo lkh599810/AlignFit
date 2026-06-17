@@ -106,27 +106,33 @@ def build() -> pd.DataFrame:
         for s in range(1, config.N_SUBJECTS + 1):
             sid = f"s{s:02d}"
             # Consistent per-subject style offset (same for all this subject's reps).
+            # Larger spread => test subjects (s09,s10) genuinely differ from train,
+            # so the correct/incorrect signal must generalise across subjects.
             subj_rng = np.random.default_rng(config.RANDOM_SEED + 1000 * s)
-            subject_offset = subj_rng.normal(0.0, 0.15 * scale, size=config.N_ANGLE_DIMS)
+            subject_offset = subj_rng.normal(0.0, 0.22 * scale, size=config.N_ANGLE_DIMS)
 
             for correctness in ("correct", "incorrect"):
                 for r in range(1, config.N_REPS_PER_CLASS + 1):
                     n = int(rng.integers(LEN_RANGE[0], LEN_RANGE[1] + 1))
                     traj = _resample(mean_traj, n) + subject_offset[None, :]
-                    traj = traj + rng.normal(0.0, 0.30 * scale, size=(n, config.N_ANGLE_DIMS))
+                    traj = traj + rng.normal(0.0, 0.35 * scale, size=(n, config.N_ANGLE_DIMS))
 
                     if correctness == "incorrect":
-                        # Reduced range of motion on the relevant joints.
-                        center = traj[:, err_dims].mean(axis=0, keepdims=True)
-                        rom_factor = rng.uniform(0.55, 0.8)
-                        traj[:, err_dims] = center + (traj[:, err_dims] - center) * rom_factor
-                        # Inject left/right asymmetry on the relevant joint pairs.
+                        # Modest, *randomised* errors so the abnormal pattern is not
+                        # identical across reps (harder, more realistic than a fixed rule).
+                        side = rng.integers(0, 2)  # 0=left side affected, 1=right side
                         for jl, jr in err_pairs:
-                            ld = config.angle_dims_for_joints([jl])
-                            asym = rng.uniform(0.4, 0.8) * scale[ld]
-                            traj[:, ld] = traj[:, ld] + asym[None, :]
-                        # Slightly noisier execution.
-                        traj = traj + rng.normal(0.0, 0.15 * scale, size=(n, config.N_ANGLE_DIMS))
+                            if rng.random() > 0.6:        # only some joints affected per rep
+                                continue
+                            jdim = config.angle_dims_for_joints([jl if side == 0 else jr])
+                            jdim = np.array(jdim, dtype=int)
+                            # mild range-of-motion reduction on this joint
+                            center = traj[:, jdim].mean(axis=0, keepdims=True)
+                            traj[:, jdim] = center + (traj[:, jdim] - center) * rng.uniform(0.82, 0.97)
+                            # mild left/right asymmetry offset on this joint
+                            traj[:, jdim] += (rng.uniform(0.20, 0.40) * scale[jdim])[None, :]
+                        # slightly noisier execution overall
+                        traj = traj + rng.normal(0.0, 0.12 * scale, size=(n, config.N_ANGLE_DIMS))
 
                     seq_id = f"{mid}_{sid}_{correctness}_r{r:02d}"
                     np.save(os.path.join(SEQ_DIR, seq_id + ".npy"), traj.astype(np.float32))
