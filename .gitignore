@@ -19,3 +19,16 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# --- intelligent component (ML) ---
+# Large raw downloads (regenerable via download script); keep small real samples
+data/raw/avakanski/
+# Generated processed datasets (regenerable via src/build_dataset.py)
+data/processed/
+# Model checkpoints (regenerable via training)
+models/*.pt
+models/*.pkl
+# Optuna study db
+db/optuna*.sqlite*
+# Training run logs
+logs/*.log
