@@ -69,6 +69,11 @@ EXERCISE_TO_INDEX = {m: i for i, m in enumerate(EXERCISE_IDS)}
 # ----------------------------------------------------------------------------
 REGION_LOWER_TRUNK = "lower_trunk"
 REGION_UPPER_SHOULDER = "upper_shoulder"
+# Additional regions introduced by the MobiPhysio dataset (parallel benchmark,
+# NOT merged with UI-PRMD). Used by the recommendation DB / linker.
+REGION_UPPER_WRIST = "upper_wrist"
+REGION_LOWER_HIP = "lower_hip"
+REGION_LOW_BACK = "low_back"
 
 EXERCISE_TO_REGION = {
     "m01": REGION_LOWER_TRUNK, "m02": REGION_LOWER_TRUNK, "m03": REGION_LOWER_TRUNK,

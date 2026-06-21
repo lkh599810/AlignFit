@@ -1,15 +1,33 @@
 # QUESTIONS — for the user to answer in the morning (priority ordered)
 
-### P1 — Real data replacement (most important)
+### P1 — Real data replacement  ✅ RESOLVED (2026-06-21)
 The official UI-PRMD site was **down (404)** overnight, so the multi-subject /
 10-exercise training data is **real-seed-grounded but partly synthetic** (see
 DECISIONS.md, report §3). I built the whole pipeline to be schema-compatible so
 real data can be dropped in later.
-- **My temporary choice:** generate a faithful synthetic dataset from the 10 real
-  per-exercise sample sequences so the pipeline runs end-to-end.
-- **Need from you:** Do you have access to the full UI-PRMD segmented dataset (or a
-  working mirror)? If yes, point me at it and I'll re-run `run_all` on real data —
-  no code changes needed beyond the loader path.
+
+**Resolution (2026-06-21):**
+- The named Kaggle mirror `liza5757/uiprmd` is **NOT** the raw dataset — it is a
+  single preprocessed sequence (`input.csv` 1423×100) + one regression label
+  (`48.333`); no subject/movement/correctness structure. Unsuitable. (Downloaded
+  to `data/raw/uiprmd_kaggle/`, kept as evidence.)
+- The official uidaho site is now **403 hard-blocked** (full raw 2000-file set
+  still inaccessible without manual/authenticated download).
+- **Decision (user):** proceed with the **real avakanski UI-PRMD deep-squat**
+  reduced set already on disk (`data/raw/avakanski/`) — real Vicon motion, real
+  file-derived correct/incorrect labels, **no synthetic generation**.
+- **Built (new modules, synthetic pipeline preserved):** `src/real_dataset.py`,
+  `src/real_features.py`, `src/real_run.py` → `db/features_real.sqlite`,
+  `models/real_*.pt`, `results/cm_real_*.png`, `results/real_comparison.md`,
+  `report/real_data_results.md`. Subject ids **recovered** from the official
+  `Prepare_Data_for_NN.m` reduction → leakage-free subject-wise split
+  (train s01-s06 / val s07-s08 / test s09-s10).
+- **Real-data test F1 (s09-s10):** majority 0.33 · nearest-centroid 0.92 · MLP
+  1.00 · 1D-CNN 0.97. Caveat: tiny test fold (36 seq, 2 subjects) → high variance.
+
+**Still open (optional):** if you want the full **10-exercise** real set, it
+requires a manual/authenticated download (browser login to the official site or
+a real Kaggle mirror); drop it in and I'll extend the real loader to all m01-m10.
 
 ### P2 — Is "movement quality" (normal/abnormal) the right headline task?
 Exercise-type classification turned out **trivially easy (F1=1.0)** — the 10

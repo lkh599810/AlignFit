@@ -1,0 +1,4 @@
+model,accuracy,precision_macro,recall_macro,f1_macro,notes
+majority,0.4839,0.2419,0.5,0.3261,always predicts class 1
+nearest_centroid,0.6129,0.6228,0.6167,0.6092,69-d summary feats
+mlp,0.6968,0.6984,0.6979,0.6967,69-d feats; params=17346; val_acc=0.762

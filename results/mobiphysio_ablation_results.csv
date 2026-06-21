@@ -1,0 +1,9 @@
+feature_group,n_features,model,accuracy,precision_macro,recall_macro,f1_macro
+all_features,69,MLP,0.671,0.6735,0.6725,0.6707
+upper_only,45,MLP,0.6452,0.6557,0.6487,0.6422
+lower_only,33,MLP,0.6,0.606,0.6029,0.598
+symmetry_only,9,MLP,0.5871,0.5867,0.5867,0.5867
+mean_only,15,MLP,0.6774,0.6821,0.6796,0.6768
+mean_std,30,MLP,0.6839,0.6846,0.6846,0.6839
+mean_std_range,45,MLP,0.6968,0.6984,0.6979,0.6967
+no_symmetry,60,MLP,0.6774,0.6807,0.6792,0.6771
