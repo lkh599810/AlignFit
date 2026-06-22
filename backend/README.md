@@ -82,6 +82,61 @@ curl -X POST http://localhost:8000/analyze/image \
   -F "image=@/path/to/posture_photo.jpg"
 ```
 
+## ML movement-quality demo (MobiPhysio)
+
+A second, ML-based flow analyzes a short **exercise video** (not a single image).
+It ports the MobiPhysio Colab feature extractor (`mobiphysio_colab_extract_v2.py`,
+Cell 4): video → MediaPipe PoseLandmarker (Tasks API, lite) → a 69-dim summary
+feature (15 joint angles × mean/std/range/max + 9 symmetry features). Two trained
+MLPs then run on it:
+
+- `models/mobi_mlp_binary_correctness.pt` → movement quality (correct / incorrect)
+- `models/mobi_mlp_exercise_9class.pt` → exercise class (E01–E09)
+
+The predicted exercise is mapped to a body region + posture pattern and linked to
+homecare items via the shared recommendation DB (`src.recommendation_db`), not the
+image flow's hard-coded rules. This reuses the repo-root `src/` ML package, so run
+from the repo root (`C:\AlignFit-intelligent`) with both backend and ML deps
+(including `torch`) installed.
+
+> On first call, the MediaPipe pose model (`pose_landmarker_lite.task`, ~10 MB) is
+> downloaded to `models/` automatically.
+
+### POST /predict
+
+Upload an exercise video; receive the ML prediction and recommendations.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| video | file | Short exercise video (mp4/avi/mov/mkv) |
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -F "video=@/path/to/exercise.mp4"
+```
+
+Example response:
+
+```json
+{
+  "pose_detected": true,
+  "frames_used": 570,
+  "movement_quality": { "label": "incorrect", "status": "needs_attention", "confidence": 0.565 },
+  "predicted_exercise": {
+    "exercise_id": "E01", "exercise_name": "Abduction", "confidence": 0.638,
+    "target_region": "upper_shoulder", "posture_pattern": "shoulder_asymmetry"
+  },
+  "note": "이번 분석에서 ... 이는 의학적 진단이 아닙니다.",
+  "recommendations": [ { "exercise_name": "Shoulder blade squeeze", "...": "..." } ],
+  "caution_message": "This is a simple posture/movement analysis for educational purposes, not a medical diagnosis. ..."
+}
+```
+
+### GET /demo
+
+A minimal HTML page (`http://localhost:8000/demo`) to upload a video in the
+browser and view the prediction + recommendations.
+
 ## Docker
 
 ```bash

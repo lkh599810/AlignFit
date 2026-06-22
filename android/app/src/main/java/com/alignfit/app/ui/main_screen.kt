@@ -39,7 +39,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
 enum class AppScreen {
-    Landing, PainSelection, BodyMapSelection, ImageUpload, AnalysisResult, ConsultationGuide, ExerciseRecommendation
+    Landing, PainSelection, BodyMapSelection, ImageUpload, AnalysisResult, ConsultationGuide, ExerciseRecommendation, AiExerciseEvaluation
 }
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
@@ -133,7 +133,11 @@ fun MainScreen() {
             result = analysisResult,
             selectedPainIds = selectedPainIds,
             bodyMapSelections = bodyMapSelections,
+            onRehabEval = { currentScreen = AppScreen.AiExerciseEvaluation },
             onBack = { currentScreen = AppScreen.AnalysisResult }
+        )
+        AppScreen.AiExerciseEvaluation -> AiExerciseWebViewScreen(
+            onBack = { currentScreen = AppScreen.ExerciseRecommendation }
         )
     }
 }

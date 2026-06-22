@@ -41,6 +41,7 @@ internal fun ExerciseRecommendationScreen(
     result: AnalysisResponse?,
     selectedPainIds: Set<String>,
     bodyMapSelections: Set<String>,
+    onRehabEval: () -> Unit,
     onBack: () -> Unit
 ) {
     val recommendations = remember(result, selectedPainIds, bodyMapSelections) {
@@ -82,6 +83,33 @@ internal fun ExerciseRecommendationScreen(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
             }
+
+            // Next step: AI rehab-movement evaluation from an exercise video.
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "재활운동을 직접 해보셨나요?",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "운동 영상을 올리면 움직임 상태를 분석해 참고용 피드백을 드려요.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    PrimaryButton(text = "재활운동 평가", onClick = onRehabEval)
+                }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = "추천 운동",

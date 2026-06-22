@@ -11,9 +11,12 @@ object RetrofitClient {
     // Change to http://127.0.0.1:8000/ when running on a physical device
     // that is on the same network as the backend server.
 //    private const val BASE_URL = "http://10.0.2.2:8000/"
-//    private const val BASE_URL = "http://172.26.141.147:8000/"
-//    private const val BASE_URL = "http://192.168.0.2:8000/"
-    private const val BASE_URL = "https://alignfit-api.leekanghyun.co.kr/"
+//    private const val BASE_URL = "https://alignfit-api.leekanghyun.co.kr/"
+//    private const val BASE_URL = "http://192.168.0.2:8000/"   // LAN: phone on same Wi-Fi as PC
+    // USB demo: `adb reverse tcp:8000 tcp:8000` tunnels the phone's 127.0.0.1:8000
+    // to the PC backend, bypassing Wi-Fi/firewall. Public so the WebView screen can
+    // reuse it for ${BASE_URL}demo.
+    const val BASE_URL = "http://127.0.0.1:8000/"
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
