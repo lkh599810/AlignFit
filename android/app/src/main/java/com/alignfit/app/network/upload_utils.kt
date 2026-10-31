@@ -145,14 +145,21 @@ fun buildVideoPart(context: Context, uri: Uri, info: VideoInfo): MultipartBody.P
 
 /** Map a network/server failure to a message the user can act on. */
 fun Throwable.toUserMessage(): String = when (this) {
-    is HttpException -> serverDetail() ?: when (code()) {
-        413 -> "파일이 너무 큽니다. 더 작은 파일로 다시 시도해 주세요."
+    // 404: FastAPI's generic "Not Found" (e.g. a backend without /predict) is not
+    // a message for users, so it is mapped before the server detail is used.
+    is HttpException -> if (code() == 404) {
+        "서버에서 이 기능을 찾을 수 없습니다. 서버가 최신 버전인지 확인해 주세요. (404)"
+    } else serverDetail() ?: when (code()) {
+        413 ->"파일이 너무 큽니다. 더 작은 파일로 다시 시도해 주세요."
         415 -> "지원하지 않는 파일 형식입니다."
         503 -> "서버의 분석 모델을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요."
         in 500..599 -> "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (${code()})"
         else -> "요청을 처리할 수 없습니다. (${code()})"
     }
-    is SocketTimeoutException -> "서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인하거나 더 짧은 영상으로 다시 시도해 주세요."
+    // OkHttp reports a connect timeout as SocketTimeoutException("failed to connect ...").
+    is SocketTimeoutException -> if (message?.contains("connect", ignoreCase = true) == true) {
+        "서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요."
+    } else "서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인하거나 더 짧은 영상으로 다시 시도해 주세요."
     is UnknownHostException, is ConnectException ->
         "서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요."
     is SSLException -> "보안 연결(HTTPS)에 실패했습니다. 기기 날짜/시간 설정을 확인해 주세요."
