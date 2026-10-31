@@ -1,10 +1,13 @@
+# Runtime dependencies for the AlignFit backend (image + video analysis).
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
-mediapipe==0.10.14
-opencv-python-headless==4.9.0.80
-numpy==1.26.4
 python-multipart==0.0.9
-torch==2.3.1
-# mediapipe pulls in opencv-contrib-python; pin to a numpy<2 build so it stays
-# compatible with torch==2.3.1 / numpy==1.26.4 (newer builds require numpy>=2).
+numpy==1.26.4
+mediapipe==0.10.14
+# Single OpenCV distribution: mediapipe already depends on opencv-contrib-python,
+# so we pin that one (numpy<2 compatible build) instead of adding a second
+# headless package that would overwrite the same `cv2` module.
 opencv-contrib-python==4.10.0.84
+# CPU-only wheel; install with --extra-index-url https://download.pytorch.org/whl/cpu
+# (the Dockerfile does this). Plain PyPI on Linux pulls the multi-GB CUDA build.
+torch==2.3.1

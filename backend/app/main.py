@@ -1,16 +1,46 @@
+import logging
 import os
+import shutil
 import tempfile
+from contextlib import asynccontextmanager
 
+import cv2
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 
 from app.schemas.analysis_schema import AnalysisResponse
+from app.schemas.predict_schema import PredictResponse
+from app.services import ml_quality_service
 from app.services.annotation_service import annotate_image
 from app.services.pose_service import INVALID_IMAGE, NO_POSE_DETECTED, extract_landmarks
 from app.services.posture_analysis_service import analyze_posture
 from app.services.recommendation_service import CAUTION_MESSAGE, generate_recommendations
 
-app = FastAPI(title="AlignFit Backend")
+log = logging.getLogger("alignfit")
+
+MAX_IMAGE_BYTES = int(os.environ.get("ALIGNFIT_MAX_IMAGE_MB", "20")) * 1024 * 1024
+MAX_VIDEO_BYTES = int(os.environ.get("ALIGNFIT_MAX_VIDEO_MB", "100")) * 1024 * 1024
+MAX_VIDEO_SECONDS = float(os.environ.get("ALIGNFIT_MAX_VIDEO_SECONDS", "60"))
+ALLOWED_VIDEO_EXT = {".mp4", ".m4v", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    # Preload video models so a broken asset shows up in logs and /health at
+    # startup. A failure here must not take down the image endpoint.
+    try:
+        ml_quality_service.load_models()
+    except ml_quality_service.ModelUnavailableError as e:
+        log.error("video model unavailable: %s", e)
+    yield
+
+
+app = FastAPI(title="AlignFit Backend", version="1.1.0", lifespan=lifespan)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "video_model_loaded": ml_quality_service.models_loaded()}
 
 _NOT_ANALYZABLE = "사진에서 자세를 인식하지 못해 이 항목은 분석하기 어렵습니다."
 
@@ -44,6 +74,11 @@ _NO_POSE_RESPONSE = AnalysisResponse(
 @app.post("/analyze/image", response_model=AnalysisResponse)
 async def analyze_image(image: UploadFile = File(...)):
     image_bytes = await image.read()
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"이미지 파일이 너무 큽니다. {MAX_IMAGE_BYTES // (1024 * 1024)}MB 이하로 업로드해 주세요.",
+        )
     landmarks = extract_landmarks(image_bytes)
 
     if landmarks == INVALID_IMAGE:
@@ -99,20 +134,62 @@ async def analyze_image(image: UploadFile = File(...)):
     )
 
 
-@app.post("/predict")
-async def predict(video: UploadFile = File(...)):
-    """Movement-quality ML demo: video -> 69-d features -> MLP -> recommendations."""
-    # Imported lazily so the image endpoint still works without the ML deps.
-    from app.services.ml_quality_service import predict_and_recommend
+@app.post("/predict", response_model=PredictResponse)
+def predict(video: UploadFile = File(...)):
+    """Video -> 69-d features -> MLPs -> recommendations.
 
-    data = await video.read()
-    suffix = os.path.splitext(video.filename or "")[1] or ".mp4"
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    Plain `def`: FastAPI runs it in the threadpool, so long CPU-bound inference
+    does not block the event loop (and the image endpoint) meanwhile.
+    """
+    ext = os.path.splitext(video.filename or "")[1].lower()
+    content_type = (video.content_type or "").lower()
+    if ext not in ALLOWED_VIDEO_EXT and not content_type.startswith("video/"):
+        raise HTTPException(
+            status_code=415,
+            detail="지원하지 않는 파일 형식입니다. mp4, mov 등 영상 파일을 업로드해 주세요.",
+        )
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext if ext in ALLOWED_VIDEO_EXT else ".mp4")
+    cap = None
     try:
-        tmp.write(data)
-        tmp.close()
-        return predict_and_recommend(tmp.name)
+        with tmp:
+            shutil.copyfileobj(video.file, tmp, length=1024 * 1024)
+            size = tmp.tell()
+        if size == 0:
+            raise HTTPException(status_code=400, detail="빈 파일입니다. 영상 파일을 다시 선택해 주세요.")
+        if size > MAX_VIDEO_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"영상 파일이 너무 큽니다. {MAX_VIDEO_BYTES // (1024 * 1024)}MB 이하로 업로드해 주세요.",
+            )
+
+        cap = cv2.VideoCapture(tmp.name)
+        fps = cap.get(cv2.CAP_PROP_FPS) if cap.isOpened() else 0
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT) if cap.isOpened() else 0
+        if fps <= 0 or frame_count <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="영상을 읽을 수 없습니다. 손상되지 않은 mp4 영상으로 다시 시도해 주세요.",
+            )
+        if frame_count / fps > MAX_VIDEO_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"영상이 너무 깁니다. {int(MAX_VIDEO_SECONDS)}초 이하로 촬영해 주세요.",
+            )
+
+        # Hard frame cap too, in case container metadata under-reports duration.
+        max_frames = int(fps * MAX_VIDEO_SECONDS) + 1
+        try:
+            return ml_quality_service.predict_and_recommend(cap, max_frames)
+        except ml_quality_service.ModelUnavailableError as e:
+            log.error("video model unavailable: %s", e)
+            raise HTTPException(
+                status_code=503,
+                detail="영상 분석 모델을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+            )
     finally:
+        if cap is not None:
+            cap.release()
         os.unlink(tmp.name)
 
 
@@ -230,6 +307,7 @@ go.onclick = async () => {
   try {
     const res = await fetch('/predict', { method: 'POST', body: fd });
     const d = await res.json();
+    if (!res.ok) { statusEl.textContent = d.detail || ('오류 ' + res.status); return; }
     statusEl.textContent = '';
 
     if (!d.pose_detected) {

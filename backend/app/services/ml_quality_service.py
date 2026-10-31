@@ -1,64 +1,68 @@
-"""ML movement-quality demo service (MobiPhysio).
+"""Video movement-quality inference (MobiPhysio MLPs).
 
-Ports the Colab feature extractor (`mobiphysio_colab_extract_v2.py`, Cell 4):
+Production port of the research pipeline in the repo-root `src/` package
+(`src/mobiphysio_*.py`, `mobiphysio_colab_extract_v2.py` Cell 4):
 
-    video -> MediaPipe PoseLandmarker (Tasks API, lite) -> per-frame joint angles
-          -> 69-d summary aggregation (15 angles x mean/std/range/max + 9 symmetry)
+    video -> MediaPipe PoseLandmarker (Tasks API, lite, IMAGE mode, every 2nd frame)
+          -> per-frame joint angles
+          -> 69-d summary vector (15 angles x mean/std/range/max + 9 symmetry)
+          -> two trained MLPs (checkpoints carry their own mu/sd standardizer)
+               * mobi_mlp_binary_correctness.pt -> correct / incorrect
+               * mobi_mlp_exercise_9class.pt    -> exercise E01..E09
+          -> exercise -> body region + posture pattern -> recommendation SQLite
 
-The 69-d vector is built EXACTLY as in the extractor so it matches the
-distribution the MobiPhysio MLPs were trained on (the checkpoints carry their own
-`mu`/`sd` standardizer). Two trained MLPs are then run:
+This module is self-contained (no import of the research `src/` package, no
+pandas) so the backend Docker image only needs `backend/`. Feature extraction and
+the MLP definition are copied verbatim from the research code so the input
+distribution matches what the checkpoints were trained on -- do not change the
+angle definitions, FRAME_STRIDE, or frame resolution without re-validating.
 
-  * `mobi_mlp_binary_correctness.pt`  -> movement quality (correct / incorrect)
-  * `mobi_mlp_exercise_9class.pt`      -> exercise class E01..E09
-
-The predicted exercise is mapped to a body region + AlignFit posture pattern and
-linked to homecare items through the shared recommendation DB
-(`src.recommendation_db.recommend_by_pattern`) -- NOT the backend's hard-coded
-rule list.
-
-NOTE: this deliberately does NOT use `pose_service.py` (single-image MediaPipe
-Solutions). It runs the Tasks-API PoseLandmarker over video frames to match the
-training pipeline.
+Model assets live in ALIGNFIT_MODELS_DIR (default: backend/models) and are
+verified against models/SHA256SUMS before loading (torch.load unpickles).
 """
 from __future__ import annotations
 
+import hashlib
+import logging
 import os
-import sys
-import urllib.request
+import sqlite3
+import threading
 
 import cv2
 import numpy as np
 import torch
+import torch.nn as nn
 
-# Make the repo-root `src` package importable from inside backend/ ------------
-# .../backend/app/services/ml_quality_service.py -> repo root is 4 levels up.
-_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import mediapipe as mp
+from mediapipe.tasks import python as mp_python
+from mediapipe.tasks.python import vision
+
+log = logging.getLogger(__name__)
+
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MODELS_DIR = os.environ.get("ALIGNFIT_MODELS_DIR", os.path.join(_BACKEND_DIR, "models"))
+RECOMMENDATION_DB = os.environ.get(
+    "ALIGNFIT_RECOMMENDATION_DB", os.path.join(_BACKEND_DIR, "data", "recommendation.sqlite")
 )
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
 
-from src import config  # noqa: E402
-from src import mobiphysio_dataset as mobi  # noqa: E402
-from src import recommendation_db  # noqa: E402
-from src.models import MLP  # noqa: E402
+POSE_MODEL_FILE = "pose_landmarker_lite.task"
+BINARY_MODEL_FILE = "mobi_mlp_binary_correctness.pt"
+EXERCISE_MODEL_FILE = "mobi_mlp_exercise_9class.pt"
 
-import mediapipe as mp  # noqa: E402
-from mediapipe.tasks import python as mp_python  # noqa: E402
-from mediapipe.tasks.python import vision  # noqa: E402
-
-# ---------------------------------------------------------------------------
-# MediaPipe PoseLandmarker (Tasks API) -- same lite model as the Colab extractor
-# ---------------------------------------------------------------------------
-_MODEL_URL = (
-    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
-    "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
-)
-_MODEL_PATH = os.path.join(config.MODELS_DIR, "pose_landmarker_lite.task")
-
+N_FEATURES = 69
+N_EXERCISE_CLASSES = 9
 MIN_VISIBILITY = 0.5
 FRAME_STRIDE = 2
+
+CAUTION_BANNER = (
+    "This is a simple posture/movement analysis for educational purposes, not a "
+    "medical diagnosis. If pain continues or worsens, consult a medical professional."
+)
+
+
+class ModelUnavailableError(RuntimeError):
+    """Model assets missing, corrupted, or failed to load."""
+
 
 # ---- Cell 4 port: landmark indices, angle triplets, stats, symmetry ---------
 L = dict(
@@ -99,14 +103,58 @@ for _name, _, _ in ANGLES:
 for _sym, _, _ in SYM_PAIRS:
     FEATURE_ORDER.append(_sym)
 FEATURE_ORDER += ["sym_shoulder_h", "sym_hip_h"]
-assert len(FEATURE_ORDER) == mobi.N_FEATURES == 69
+assert len(FEATURE_ORDER) == N_FEATURES
 
-# Exercise id -> human-readable name (Cell 3 EX_NAME of the extractor).
+# Exercise id -> names / region / pattern (src/mobiphysio_dataset.py + extractor Cell 3).
 EXERCISE_NAMES = {
     "E01": "Abduction", "E02": "Adduction", "E03": "Lateral Rotation",
     "E04": "Medial Rotation", "E05": "Circumduction", "E06": "Wrist Extension",
     "E07": "Hip Joint Flexion", "E08": "Lumber Flexion", "E09": "Back Extension",
 }
+EXERCISE_NAMES_KO = {
+    "E01": "어깨 벌림 동작", "E02": "어깨 모음 동작", "E03": "어깨 바깥 돌림 동작",
+    "E04": "어깨 안쪽 돌림 동작", "E05": "어깨 휘돌리기 동작", "E06": "손목 폄 동작",
+    "E07": "고관절 굽힘 동작", "E08": "허리 굽힘 동작", "E09": "등 폄 동작",
+}
+EXERCISE_TO_REGION = {
+    "E01": "upper_shoulder", "E02": "upper_shoulder", "E03": "upper_shoulder",
+    "E04": "upper_shoulder", "E05": "upper_shoulder", "E06": "upper_wrist",
+    "E07": "lower_hip", "E08": "low_back", "E09": "low_back",
+}
+EXERCISE_TO_PATTERN = {
+    "E01": "shoulder_asymmetry", "E02": "shoulder_mobility", "E03": "shoulder_rotation",
+    "E04": "shoulder_rotation", "E05": "shoulder_mobility", "E06": "wrist_mobility",
+    "E07": "hip_mobility", "E08": "low_back_mobility", "E09": "low_back_mobility",
+}
+REGION_KO = {
+    "upper_shoulder": "어깨/견갑 부위", "upper_wrist": "손목/팔 부위",
+    "lower_hip": "고관절 부위", "low_back": "허리 부위", "lower_trunk": "몸통/하체 부위",
+}
+PATTERN_KO = {
+    "shoulder_asymmetry": "좌우 어깨 움직임 비대칭 가능성",
+    "shoulder_mobility": "어깨 가동성 저하 가능성",
+    "shoulder_rotation": "어깨 회전 움직임 제한 가능성",
+    "wrist_mobility": "손목 가동성 저하 가능성",
+    "hip_mobility": "고관절 가동성 저하 가능성",
+    "low_back_mobility": "허리 가동성 저하 가능성",
+}
+
+
+class MLP(nn.Module):
+    """Same definition as src/models.py::MLP (state_dict keys net.0/net.3/net.6)."""
+
+    def __init__(self, in_dim, n_classes, hidden_sizes=(128, 64), dropout=0.3):
+        super().__init__()
+        layers = []
+        prev = in_dim
+        for h in hidden_sizes:
+            layers += [nn.Linear(prev, h), nn.ReLU(), nn.Dropout(dropout)]
+            prev = h
+        layers.append(nn.Linear(prev, n_classes))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)
 
 
 def _angle(a, b, c):
@@ -146,48 +194,78 @@ def clip_features(coords):
 
 
 # ---------------------------------------------------------------------------
-# Lazy singletons (model file download + heavy objects loaded once)
+# Model loading (once, verified against SHA256SUMS)
 # ---------------------------------------------------------------------------
+# ponytail: one global lock serializes video inference (PoseLandmarker is not
+# thread-safe); use a landmarker pool / worker queue if concurrent load grows.
+_lock = threading.Lock()
 _landmarker = None
 _binary = None
 _exercise = None
 
 
-def _ensure_landmarker():
-    global _landmarker
-    if _landmarker is None:
-        if not os.path.exists(_MODEL_PATH):
-            urllib.request.urlretrieve(_MODEL_URL, _MODEL_PATH)
-        # Pass the model as a byte buffer rather than a path: MediaPipe Tasks
-        # mishandles absolute Windows paths (drive-letter colon) and prepends its
-        # own resource dir, causing "Unable to open file ... errno=22".
-        with open(_MODEL_PATH, "rb") as f:
-            model_bytes = f.read()
-        opts = vision.PoseLandmarkerOptions(
-            base_options=mp_python.BaseOptions(model_asset_buffer=model_bytes),
-            running_mode=vision.RunningMode.IMAGE, num_poses=1,
-            min_pose_detection_confidence=0.5, min_pose_presence_confidence=0.5,
-        )
-        _landmarker = vision.PoseLandmarker.create_from_options(opts)
-    return _landmarker
+def _expected_hashes() -> dict[str, str]:
+    path = os.path.join(MODELS_DIR, "SHA256SUMS")
+    if not os.path.exists(path):
+        raise ModelUnavailableError(f"missing {path}")
+    out = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                digest, name = line.split(maxsplit=1)
+                out[name.strip().lstrip("*")] = digest
+    return out
 
 
-def _load_mlp(filename, n_classes):
-    ckpt = torch.load(os.path.join(config.MODELS_DIR, filename), map_location="cpu")
-    model = MLP(mobi.N_FEATURES, n_classes,
+def _read_verified(filename: str, hashes: dict[str, str]) -> bytes:
+    path = os.path.join(MODELS_DIR, filename)
+    if not os.path.exists(path):
+        raise ModelUnavailableError(f"missing model file {path}")
+    with open(path, "rb") as f:
+        data = f.read()
+    if hashlib.sha256(data).hexdigest() != hashes.get(filename):
+        raise ModelUnavailableError(f"checksum mismatch for {filename}")
+    return data
+
+
+def _load_mlp(data: bytes, n_classes: int):
+    import io
+
+    ckpt = torch.load(io.BytesIO(data), map_location="cpu")
+    model = MLP(N_FEATURES, n_classes,
                 hidden_sizes=tuple(ckpt["hidden_sizes"]), dropout=ckpt["dropout"])
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
     return model, ckpt["mu"], ckpt["sd"]
 
 
-def _models():
-    global _binary, _exercise
-    if _binary is None:
-        _binary = _load_mlp("mobi_mlp_binary_correctness.pt", 2)
-    if _exercise is None:
-        _exercise = _load_mlp("mobi_mlp_exercise_9class.pt", mobi.N_EXERCISE_CLASSES)
-    return _binary, _exercise
+def load_models():
+    """Load all video-model assets. Raises ModelUnavailableError on any failure."""
+    global _landmarker, _binary, _exercise
+    with _lock:
+        if _landmarker is not None:
+            return
+        try:
+            hashes = _expected_hashes()
+            binary = _load_mlp(_read_verified(BINARY_MODEL_FILE, hashes), 2)
+            exercise = _load_mlp(_read_verified(EXERCISE_MODEL_FILE, hashes), N_EXERCISE_CLASSES)
+            # Model passed as a buffer: MediaPipe Tasks mishandles absolute Windows paths.
+            opts = vision.PoseLandmarkerOptions(
+                base_options=mp_python.BaseOptions(
+                    model_asset_buffer=_read_verified(POSE_MODEL_FILE, hashes)),
+                running_mode=vision.RunningMode.IMAGE, num_poses=1,
+                min_pose_detection_confidence=0.5, min_pose_presence_confidence=0.5,
+            )
+            landmarker = vision.PoseLandmarker.create_from_options(opts)
+        except ModelUnavailableError:
+            raise
+        except Exception as e:  # corrupted checkpoint, incompatible torch/mediapipe, ...
+            raise ModelUnavailableError(f"model load failed: {e}") from e
+        _binary, _exercise, _landmarker = binary, exercise, landmarker
+
+
+def models_loaded() -> bool:
+    return _landmarker is not None
 
 
 @torch.no_grad()
@@ -199,84 +277,94 @@ def _predict(bundle, vec):
     return idx, float(prob[idx])
 
 
-def extract_features_from_video(video_path):
-    """Run PoseLandmarker over the video and return (69-d float32 vector, n_frames).
-
-    Returns (None, n_frames_with_pose) when too few usable frames were found.
-    """
-    landmarker = _ensure_landmarker()
+def _extract_features(cap, max_frames: int):
+    """Run PoseLandmarker over frames; return (69-d vector or None, frames with pose)."""
     coords = []
-    cap = cv2.VideoCapture(video_path)
     fi = 0
-    while True:
+    while fi < max_frames:
         ok, fr = cap.read()
         if not ok:
             break
         if fi % FRAME_STRIDE == 0:
             rgb = cv2.cvtColor(fr, cv2.COLOR_BGR2RGB)
-            mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-            res = landmarker.detect(mp_img)
+            res = _landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
             if res.pose_landmarks:
                 lm = res.pose_landmarks[0]
                 coords.append(np.array([[p.x, p.y, p.visibility] for p in lm]))
         fi += 1
-    cap.release()
     if len(coords) < 3:
         return None, len(coords)
-    feats, _T = clip_features(coords)
-    vec = np.array([feats.get(k, 0.0) for k in FEATURE_ORDER], dtype=np.float32)
-    return vec, len(coords)
+    feats, _ = clip_features(coords)
+    return np.array([feats.get(k, 0.0) for k in FEATURE_ORDER], dtype=np.float32), len(coords)
 
 
-def predict_and_recommend(video_path):
-    """Full chain: video -> 69-d features -> MLP predictions -> recommendations."""
-    if not os.path.exists(config.RECOMMENDATION_DB):
-        recommendation_db.build_db()
+def _recommend(pattern: str, region: str, limit: int = 3) -> list[dict]:
+    """Pattern match first, region fallback (same as src.recommendation_db.recommend_by_pattern)."""
+    conn = sqlite3.connect(f"file:{RECOMMENDATION_DB}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    cols = "exercise_name, related_body_part, reason, cautions, youtube_query, verify_citation"
+    try:
+        rows = conn.execute(
+            f"SELECT {cols} FROM recommendation WHERE posture_pattern = ? LIMIT ?",
+            (pattern, limit)).fetchall()
+        if not rows:
+            rows = conn.execute(
+                f"SELECT {cols} FROM recommendation WHERE target_region = ? LIMIT ?",
+                (region, limit)).fetchall()
+    finally:
+        conn.close()
+    return [dict(r) for r in rows]
 
-    vec, n_frames = extract_features_from_video(video_path)
+
+def predict_and_recommend(cap, max_frames: int) -> dict:
+    """Full chain on an opened cv2.VideoCapture. Caller validates the video first."""
+    load_models()
+    with _lock:
+        vec, n_frames = _extract_features(cap, max_frames)
     if vec is None:
         return {
             "pose_detected": False,
             "frames_used": n_frames,
             "message": ("영상에서 자세를 충분히 인식하지 못했습니다. "
                         "전신이 밝고 선명하게 보이는 영상으로 다시 시도해 주세요."),
-            "caution_message": recommendation_db.CAUTION_BANNER,
+            "recommendations": [],
+            "caution_message": CAUTION_BANNER,
         }
 
-    binary_bundle, exercise_bundle = _models()
-    b_idx, b_conf = _predict(binary_bundle, vec)
-    e_idx, e_conf = _predict(exercise_bundle, vec)
-
+    b_idx, b_conf = _predict(_binary, vec)
+    e_idx, e_conf = _predict(_exercise, vec)
     exercise_id = f"E{e_idx + 1:02d}"
-    region = mobi.MOBI_EXERCISE_TO_REGION[exercise_id]
-    pattern = mobi.MOBI_EXERCISE_TO_PATTERN[exercise_id]
-    recs = recommendation_db.recommend_by_pattern(pattern, region=region)
+    region = EXERCISE_TO_REGION[exercise_id]
+    pattern = EXERCISE_TO_PATTERN[exercise_id]
 
     if b_idx == 1:
-        quality = "needs_attention"
-        note = ("이번 분석에서 좌우 비대칭이나 가동범위 제한 신호가 보였습니다. "
-                "아래 홈케어 동작이 도움이 될 수 있습니다. 이는 의학적 진단이 아닙니다.")
+        status = "needs_attention"
+        message = ("이번 분석에서 좌우 비대칭이나 가동범위 제한 신호가 보였습니다. "
+                   "아래 홈케어 동작이 도움이 될 수 있습니다. 이는 의학적 진단이 아닙니다.")
     else:
-        quality = "looks_ok"
-        note = ("움직임이 대체로 균형 있어 보였습니다. "
-                "아래 동작은 일반적인 유지·관리 목적의 참고용입니다.")
+        status = "looks_ok"
+        message = ("움직임이 대체로 균형 있어 보였습니다. "
+                   "아래 동작은 일반적인 유지·관리 목적의 참고용입니다.")
 
     return {
         "pose_detected": True,
         "frames_used": n_frames,
         "movement_quality": {
             "label": "incorrect" if b_idx == 1 else "correct",
-            "status": quality,
+            "status": status,
             "confidence": round(b_conf, 3),
         },
         "predicted_exercise": {
             "exercise_id": exercise_id,
             "exercise_name": EXERCISE_NAMES[exercise_id],
+            "exercise_name_ko": EXERCISE_NAMES_KO[exercise_id],
             "confidence": round(e_conf, 3),
             "target_region": region,
+            "target_region_ko": REGION_KO[region],
             "posture_pattern": pattern,
+            "posture_pattern_ko": PATTERN_KO[pattern],
         },
-        "note": note,
-        "recommendations": recs,
-        "caution_message": recommendation_db.CAUTION_BANNER,
+        "message": message,
+        "recommendations": _recommend(pattern, region),
+        "caution_message": CAUTION_BANNER,
     }
