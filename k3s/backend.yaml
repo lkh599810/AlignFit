@@ -1,0 +1,98 @@
+# AlignFit API: FastAPI + MediaPipe + PyTorch CPU (image + video analysis).
+# Stateless: model checkpoints and the recommendation SQLite DB are baked into
+# the image (verified at load against models/SHA256SUMS), so no volume.
+#
+# The image tag is the full commit SHA, rewritten by
+# .github/workflows/backend-image.yml after a tested image is published.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alignfit-backend
+  namespace: alignfit
+  labels:
+    app.kubernetes.io/name: alignfit-backend
+    app.kubernetes.io/part-of: alignfit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alignfit-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alignfit-backend
+        app.kubernetes.io/part-of: alignfit
+    spec:
+      # Needed only while the GHCR package is private; harmless if absent.
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: api
+          image: ghcr.io/lkh599810/alignfit-backend:0000000000000000000000000000000000000000
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: ALIGNFIT_MAX_VIDEO_MB
+              value: "100"
+            - name: ALIGNFIT_MAX_VIDEO_SECONDS
+              value: "60"
+            - name: ALIGNFIT_MAX_IMAGE_MB
+              value: "20"
+          # Models load at startup (a few seconds); /health reports
+          # video_model_loaded. The image endpoint works even if they fail.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            # Measured locally: ~300MB after model load, ~350MB after a video +
+            # a 12MP photo request. Limit leaves room for long/high-res videos.
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1536Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+# Transition: stays NodePort 30081 so Caddy keeps working unchanged while the
+# HTTPRoute is brought up. After Caddy points at the Gateway, change to
+# `type: ClusterIP` and delete the nodePort line (see docs/deployment.md).
+apiVersion: v1
+kind: Service
+metadata:
+  name: alignfit-backend
+  namespace: alignfit
+  labels:
+    app.kubernetes.io/name: alignfit-backend
+    app.kubernetes.io/part-of: alignfit
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: alignfit-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      nodePort: 30081

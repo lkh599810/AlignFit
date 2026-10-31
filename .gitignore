@@ -32,3 +32,13 @@ models/*.pkl
 db/optuna*.sqlite*
 # Training run logs
 logs/*.log
+# --- integration: never commit ---
+# Local tool settings, logs, test caches
+.claude/settings.local.json
+*.log
+.pytest_cache/
+# Third-party raw datasets / sample videos (licence unclear; fetch via
+# src/download_data.py or the dataset owners -- see docs/research/)
+data/raw/
+*.mp4
+*.mov

@@ -1,0 +1,25 @@
+# Argo CD Application for AlignFit. Apply once, by hand, after reviewing
+# docs/deployment.md (kept outside k3s/ so the app does not manage itself):
+#   kubectl apply -n argocd -f deploy/argocd/alignfit.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alignfit
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lkh599810/AlignFit.git
+    targetRevision: main
+    path: k3s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: alignfit
+  syncPolicy:
+    # Start manual: first sync must be watched (it adopts/replaces the
+    # hand-made resources). Enable automated after the first clean sync.
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

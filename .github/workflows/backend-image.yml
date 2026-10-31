@@ -1,35 +1,159 @@
-﻿name: Build AlignFit Backend Image
+name: Backend image
 
 on:
   push:
-    branches:
-      - mobile-submission
+    branches: [main]
     paths:
       - "backend/**"
       - ".github/workflows/backend-image.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/lkh599810/alignfit-backend
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: Install backend and test dependencies (CPU torch)
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt
+      - name: Verify bundled model checksums
+        run: cd models && sha256sum -c SHA256SUMS
+      - name: Run backend tests
+        run: python -m pytest -q tests
 
+  image:
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
-
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Build image for the home server
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test the container (models load, both APIs answer)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup() {
+            docker logs alignfit-smoke || true
+            docker rm -f alignfit-smoke || true
+          }
+          trap cleanup EXIT
+          docker run -d --name alignfit-smoke -p 127.0.0.1:8000:8000 "$IMAGE:$GITHUB_SHA"
+          docker exec alignfit-smoke python -c 'import os; assert os.getuid() == 10001'
+          curl --fail --silent --show-error --retry 30 --retry-all-errors \
+            --retry-delay 2 --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health \
+            | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d == {"status": "ok", "video_model_loaded": True}, d'
+          # Invalid image -> 400 (image pipeline reachable).
+          code=$(curl -s -o /dev/null -w '%{http_code}' -F 'image=@/etc/hostname;type=image/jpeg' http://127.0.0.1:8000/analyze/image)
+          test "$code" = 400
+          # Blank 2s video -> 200 with pose_detected=false (video decode + models run).
+          docker exec alignfit-smoke python -c '
+          import cv2, numpy as np
+          w = cv2.VideoWriter("/tmp/blank.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 10, (160, 120))
+          [w.write(np.zeros((120, 160, 3), np.uint8)) for _ in range(20)]
+          w.release()'
+          docker cp alignfit-smoke:/tmp/blank.mp4 /tmp/blank.mp4
+          curl --fail --silent --show-error -F 'video=@/tmp/blank.mp4;type=video/mp4' http://127.0.0.1:8000/predict \
+            | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d["pose_detected"] is False and d["caution_message"], d'
+          echo "container smoke test: OK"
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'lkh599810/AlignFit'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the tested image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'lkh599810/AlignFit'
+        run: |
+          docker push "$IMAGE:$GITHUB_SHA"
+          printf 'Published image: `%s:%s`\n' "$IMAGE" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v6
+  # GitOps: point k3s/backend.yaml at the image just published; Argo CD deploys
+  # the commit. No CI loop: GITHUB_TOKEN pushes never start workflows, k3s/** is
+  # outside this workflow's paths, and the message carries [skip ci].
+  manifest:
+    needs: image
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'lkh599810/AlignFit'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency:
+      group: k3s-manifest-backend
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          context: ./backend
-          push: true
-          tags: ghcr.io/lkh599810/alignfit-backend:mobile-submission
+          ref: main
+          fetch-depth: 0
+      - name: Point k3s/backend.yaml at the published image
+        shell: bash
+        run: |
+          set -euo pipefail
+          file=k3s/backend.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch --quiet origin main
+            git reset --quiet --hard origin/main
+            current=$(grep -oPm1 "$IMAGE:\K[0-9a-f]{40}" "$file")
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$current" 2>/dev/null; then
+              echo "$file already at $current; nothing to do"
+              exit 0
+            fi
+            sed -i "s#$IMAGE:[0-9a-f]\{40\}#$IMAGE:$GITHUB_SHA#g" "$file"
+            git commit --quiet -am "chore(k3s): deploy backend ${GITHUB_SHA::7} [skip ci]"
+            if git push --quiet origin HEAD:main; then
+              printf 'Deployed via GitOps: `%s` -> `%s:%s`\n' "$file" "$IMAGE" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "could not push the tag update after 5 attempts" >&2
+          exit 1
