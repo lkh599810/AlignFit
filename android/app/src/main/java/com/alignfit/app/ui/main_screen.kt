@@ -30,11 +30,14 @@ import androidx.compose.ui.unit.sp
 import com.alignfit.app.data.HomecareDictionary
 import com.alignfit.app.data.PainRegionGroup
 import com.alignfit.app.network.AnalysisResponse
+import com.alignfit.app.network.PREVIEW_IMAGE_MAX_SIDE
 import com.alignfit.app.network.RetrofitClient
+import com.alignfit.app.network.buildImagePart
+import com.alignfit.app.network.decodeSampledBitmap
+import com.alignfit.app.network.toUserMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.coroutines.withContext
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
@@ -89,12 +92,16 @@ fun MainScreen() {
                 annotatedBitmap = null
                 analysisResult = null
                 coroutineScope.launch {
-                    try {
-                        val stream = context.contentResolver.openInputStream(uri)
-                        selectedImageBitmap = BitmapFactory.decodeStream(stream)
-                        stream?.close()
-                    } catch (_: Exception) {
-                        selectedImageBitmap = null
+                    // Downsampled preview: a full-resolution camera photo can need
+                    // ~50MB+ as a Bitmap.
+                    selectedImageBitmap = withContext(Dispatchers.IO) {
+                        try {
+                            decodeSampledBitmap(context, uri, PREVIEW_IMAGE_MAX_SIDE)
+                        } catch (_: Exception) {
+                            null
+                        } catch (_: OutOfMemoryError) {
+                            null
+                        }
                     }
                 }
             },
@@ -136,7 +143,7 @@ fun MainScreen() {
             onRehabEval = { currentScreen = AppScreen.AiExerciseEvaluation },
             onBack = { currentScreen = AppScreen.AnalysisResult }
         )
-        AppScreen.AiExerciseEvaluation -> AiExerciseWebViewScreen(
+        AppScreen.AiExerciseEvaluation -> VideoEvaluationScreen(
             onBack = { currentScreen = AppScreen.ExerciseRecommendation }
         )
     }
@@ -384,30 +391,29 @@ private fun ImageUploadScreen(
                     errorText = ""
                     coroutineScope.launch {
                         try {
-                            val stream = context.contentResolver.openInputStream(uri)
-                            val bytes = stream?.readBytes()
-                            stream?.close()
-                            if (bytes == null) {
-                                errorText = "이미지를 읽을 수 없습니다."
+                            // Downscaled + EXIF-rotated JPEG (<= 1600px); the server
+                            // returns an annotated image of the same size.
+                            val part = withContext(Dispatchers.IO) { buildImagePart(context, uri) }
+                            if (part == null) {
+                                errorText = "이미지를 읽을 수 없습니다. 다른 사진을 선택해 주세요."
                                 isLoading = false
                                 return@launch
                             }
-                            val mimeType =
-                                context.contentResolver.getType(uri) ?: "image/jpeg"
-                            val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                            val part = MultipartBody.Part.createFormData(
-                                "image", "upload.jpg", requestBody
-                            )
                             val response = RetrofitClient.apiService.analyzeImage(part)
-                            val annotatedBmp = response.annotatedImageBase64?.let { b64 ->
-                                val decoded = Base64.decode(b64, Base64.DEFAULT)
-                                BitmapFactory.decodeByteArray(decoded, 0, decoded.size)
+                            val annotatedBmp = withContext(Dispatchers.Default) {
+                                response.annotatedImageBase64?.let { b64 ->
+                                    val decoded = Base64.decode(b64, Base64.DEFAULT)
+                                    BitmapFactory.decodeByteArray(decoded, 0, decoded.size)
+                                }
                             }
                             isLoading = false
                             onAnalysisComplete(response, annotatedBmp)
                         } catch (e: Exception) {
                             isLoading = false
-                            errorText = "분석 중 오류가 발생했습니다. 네트워크 연결 및 서버 상태를 확인해 주세요."
+                            errorText = e.toUserMessage()
+                        } catch (e: OutOfMemoryError) {
+                            isLoading = false
+                            errorText = e.toUserMessage()
                         }
                     }
                 },

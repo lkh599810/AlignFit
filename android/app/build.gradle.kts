@@ -12,8 +12,33 @@ android {
         applicationId = "com.alignfit.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+    }
+
+    // API endpoint per build flavor (Build Variants in Android Studio):
+    //  - prod  (default): deployed HTTPS backend. Cleartext HTTP is disabled.
+    //  - local          : backend on a dev PC. Default http://127.0.0.1:8000/ works
+    //                     on a USB-connected phone after `adb reverse tcp:8000 tcp:8000`
+    //                     (emulator: -Palignfit.localApiUrl=http://10.0.2.2:8000/).
+    //                     Separate applicationId, so it never replaces the prod app.
+    flavorDimensions += "env"
+    productFlavors {
+        create("prod") {
+            dimension = "env"
+            isDefault = true
+            buildConfigField("String", "API_BASE_URL", "\"https://alignfit-api.leekanghyun.co.kr/\"")
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+        }
+        create("local") {
+            dimension = "env"
+            applicationIdSuffix = ".local"
+            versionNameSuffix = "-local"
+            val localUrl = (project.findProperty("alignfit.localApiUrl") as String?)
+                ?: "http://127.0.0.1:8000/"
+            buildConfigField("String", "API_BASE_URL", "\"$localUrl\"")
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
     }
 
     buildTypes {
@@ -33,6 +58,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

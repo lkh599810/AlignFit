@@ -15,30 +15,26 @@ Minimal Android MVP for the AlignFit posture analysis app.
 2. Choose **Open** and select the `android/` folder.
 3. Let Gradle sync finish.
 
-## Backend URL
+## Backend URL (build flavors)
 
-The app connects to the FastAPI backend at:
+The API base URL comes from the build flavor (`app/build.gradle.kts`); nothing is
+hard-coded in Kotlin. Pick the variant in Android Studio's *Build Variants* panel.
 
-```
-http://10.0.2.2:8000/
-```
+| Variant | API | Package | Cleartext HTTP |
+|---|---|---|---|
+| `prodDebug` / `prodRelease` (default) | `https://alignfit-api.leekanghyun.co.kr/` | `com.alignfit.app` | blocked |
+| `localDebug` | `http://127.0.0.1:8000/` | `com.alignfit.app.local` ("AlignFit (local)") | allowed |
 
-`10.0.2.2` is the Android emulator's alias for the host machine's `localhost`.
+`local` installs next to the production app instead of replacing it.
 
-If you run the app on a **physical device**, update `BASE_URL` in:
+- USB phone + backend on the PC: `adb reverse tcp:8000 tcp:8000`, then run `localDebug`.
+- Emulator: `./gradlew assembleLocalDebug -Palignfit.localApiUrl=http://10.0.2.2:8000/`
+- Same Wi-Fi: `-Palignfit.localApiUrl=http://192.168.x.x:8000/`
 
-```
-app/src/main/java/com/alignfit/app/network/retrofit_client.kt
-```
+Backend: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000`.
 
-Replace `10.0.2.2` with your machine's local IP address (e.g., `192.168.x.x`).
-
-Make sure the backend is running first:
-
-```
-cd C:\AlignFit\backend
-uvicorn app.main:app --reload
-```
+Command-line build: `./gradlew assembleProdDebug` (APK in `app/build/outputs/apk/prod/debug/`).
+`prodRelease` is unsigned until a signing config is added.
 
 ## How to use
 
