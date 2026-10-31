@@ -4,23 +4,30 @@
 #
 # The image tag is the full commit SHA, rewritten by
 # .github/workflows/backend-image.yml after a tested image is published.
+# The 40-zero tag is a placeholder: connect Argo CD only after the first CI
+# run has replaced it (otherwise the pod stays in ImagePullBackOff).
+#
+# Names are deliberately new (`alignfit-api`): the hand-made resources that
+# serve NodePort 30081 today are not touched, so both stacks run side by side
+# during the Caddy 30081 -> 30080 (Traefik Gateway) switch. Labels use only
+# app.kubernetes.io/* keys so no existing selector can match these pods.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alignfit-backend
+  name: alignfit-api
   namespace: alignfit
   labels:
-    app.kubernetes.io/name: alignfit-backend
+    app.kubernetes.io/name: alignfit-api
     app.kubernetes.io/part-of: alignfit
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: alignfit-backend
+      app.kubernetes.io/name: alignfit-api
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: alignfit-backend
+        app.kubernetes.io/name: alignfit-api
         app.kubernetes.io/part-of: alignfit
     spec:
       # Needed only while the GHCR package is private; harmless if absent.
@@ -76,23 +83,21 @@ spec:
             capabilities:
               drop: [ALL]
 ---
-# Transition: stays NodePort 30081 so Caddy keeps working unchanged while the
-# HTTPRoute is brought up. After Caddy points at the Gateway, change to
-# `type: ClusterIP` and delete the nodePort line (see docs/deployment.md).
+# ClusterIP only: traffic arrives via HTTPRoute (k3s/httproute.yaml). NodePort
+# 30081 stays on the old hand-made Service until it is retired.
 apiVersion: v1
 kind: Service
 metadata:
-  name: alignfit-backend
+  name: alignfit-api
   namespace: alignfit
   labels:
-    app.kubernetes.io/name: alignfit-backend
+    app.kubernetes.io/name: alignfit-api
     app.kubernetes.io/part-of: alignfit
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    app.kubernetes.io/name: alignfit-backend
+    app.kubernetes.io/name: alignfit-api
   ports:
     - name: http
       port: 8000
       targetPort: http
-      nodePort: 30081

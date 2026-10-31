@@ -1,0 +1,174 @@
+# AlignFit - 작업 기록
+
+이 파일은 사용자의 요청과 그에 따른 작업 내역을 시간순으로 기록한다.
+새로운 요청/작업이 있을 때마다 아래에 항목을 추가한다.
+다음 작업자는 `git log`와 이 파일만 보고 이어받을 수 있어야 한다.
+
+## 저장소 / Worktree 현황 (2026-11-01 기준)
+
+- 원격: https://github.com/lkh599810/AlignFit.git
+  - 원격 브랜치: feature/backend-mvp(기본 브랜치, 2231116, 가장 오래됨), mobile-submission(f23c7ba), sleep-auto-001(ad62a1a)
+  - main 브랜치 없음
+- 로컬 Worktree
+  - C:\Alignfit_integration\AlignFit              mobile-submission  f23c7ba  (변경 없음, 현재 홈서버 배포 기준)
+  - C:\Alignfit_integration\AlignFit-intelligent  sleep-auto-001     ad62a1a  (미커밋: _uvicorn_demo.log 수정 1건, 보존)
+  - C:\Alignfit_integration\AlignFit-integration  integration        74321c1  (이번 작업, push 안 함)
+- 히스토리는 선형: feature/backend-mvp ⊂ mobile-submission ⊂ sleep-auto-001 ⊂ integration
+- 로컬 전용 브랜치: intelligent-multimedia-model(= f23c7ba), 로컬 feature/backend-mvp(원격보다 5커밋 앞, mobile-submission에 포함됨)
+
+---
+
+## 요청 #1 — 두 브랜치 비교 분석 (2026-11-01, 분석만)
+
+요청: mobile-submission vs sleep-auto-001의 Git 관계·기능 비교, 휴대폰 앱이 홈서버와 통신 못 하는
+원인 분석, 통합 방향 제안. 코드/서버 변경 금지.
+
+결과:
+- sleep-auto-001 = mobile-submission + 5커밋(Phase 0-3, 4-10, 11, MobiPhysio, Intelligent-multimedia system).
+  기존 파일 수정 7개, 나머지는 연구 코드/데이터/결과.
+- 홈서버 확인: openapi에 POST /analyze/image만 있음(mobile-submission 이미지).
+  PC에서 실사진 POST → 200(0.5~4.4s). TLS 체인 Let's Encrypt YE2 → ISRG X1 교차서명, 정상.
+- 빌드된 APK 문자열 추출:
+  - AlignFit APK(6/14) → https://alignfit-api.leekanghyun.co.kr/
+  - AlignFit-intelligent APK(6/22) → http://127.0.0.1:8000/ (+ /demo)
+  - applicationId 동일(com.alignfit.app) → 나중 설치가 덮어씀
+- 원인 가설(우선순위): H1 휴대폰에 intelligent APK(127.0.0.1) 설치됨 / H2 고해상도 사진 OOM
+  (BODY 로깅 + 원본 해상도 주석 이미지) / H3 OkHttp 기본 10s 타임아웃 / H4 Android 7.0 루트 인증서 /
+  H5 영상 기능은 서버에 /predict 없어 404.
+- intelligent 미완성 요소: Docker 컨텍스트에 src/·models/·db/ 없음, mobi_mlp_*.pt gitignore,
+  PyPI torch(CUDA) 거대, OpenCV 중복, /predict 입력 검증 없음, WebView 의존.
+
+## 상태
+- 코드 변경 없음. 커밋 없음.
+
+---
+
+## 요청 #2 — 최종 통합 및 안정화 (2026-11-01)
+
+요청: sleep-auto-001 기반 integration 브랜치에서 사진 분석 + 영상 평가가 모두 되는 하나의 AlignFit 완성.
+Android/백엔드/ML/Docker/배포 구성 준비, 로컬 테스트. push, k3s/Caddy/Argo CD 적용 금지.
+
+worker: claude / worktree: C:\Alignfit_integration\AlignFit-integration / branch: integration
+(git worktree add -b integration ../AlignFit-integration sleep-auto-001)
+
+### 백엔드 (backend/)
+- app/services/ml_quality_service.py: 자립형으로 재작성. 연구 src/·pandas 미사용.
+  69-d 특징 추출(Cell 4)과 MLP 정의 원본 그대로 이식. 모델은 기동 시 1회 로드,
+  models/SHA256SUMS로 해시 검증 후 torch.load. 전역 lock으로 영상 추론 직렬화.
+- app/main.py: /predict 검증(형식 415, 100MB 초과 413, 빈/손상/60초 초과 400, 모델 불가 503),
+  스레드풀 실행, /health 추가, /analyze/image 20MB 제한(413), /demo 오류 표시.
+  lifespan에서 모델 preload — 실패해도 사진 API는 동작.
+- app/schemas/predict_schema.py 신규(PredictResponse, 한글 라벨 *_ko 필드).
+- models/: mobi_mlp_binary_correctness.pt, mobi_mlp_exercise_9class.pt(원본 체크포인트 그대로,
+  재학습/교체 없음), pose_landmarker_lite.task(루트 models/에서 git mv), SHA256SUMS.
+- data/recommendation.sqlite: db/recommendation.sqlite 복사본(런타임 읽기 전용).
+- requirements.txt: opencv-contrib-python 단일, torch 2.3.1(CPU 인덱스). requirements-dev.txt 추가.
+- Dockerfile: python:3.11-slim-bookworm, CPU torch, 모델/DB 포함, uid 10001, HEALTHCHECK /health.
+- tests/test_api.py 신규 13개(실미디어는 ALIGNFIT_TEST_IMAGE/VIDEO 환경변수, 미설정 시 skip).
+
+### Android (android/)
+- build flavor: prod(기본, HTTPS, com.alignfit.app, cleartext 차단) /
+  local(http://127.0.0.1:8000/, com.alignfit.app.local, cleartext 허용, -Palignfit.localApiUrl로 변경).
+  local이 운영 앱을 덮어쓰지 않음 → 요청 #1의 H1 재발 방지.
+- network/upload_utils.kt 신규: 사진 1600px 축소 + EXIF 회전 + JPEG, 미리보기 축소 디코딩,
+  영상 스트리밍 업로드, 사전 크기/길이 검사, 오류 → 한국어 메시지 매핑(서버 detail 우선).
+- retrofit_client.kt: BuildConfig.API_BASE_URL, 타임아웃 15/120/180s, 로그 debug만 HEADERS.
+- api_service.kt(predictVideo), predict_response.kt 신규.
+- ui/video_evaluation_screen.kt 신규: 네이티브 영상 평가 화면.
+  ui/ai_exercise_screen.kt(WebView) 삭제 — 같은 기능 네이티브로 대체, 백엔드 /demo는 브라우저용으로 유지.
+- ui/main_screen.kt: 사진 업로드/미리보기를 새 헬퍼로 교체, 화면 흐름·UI는 그대로.
+- Gradle wrapper(gradlew, 실행 권한) 추가.
+
+### 저장소 정리 / 배포 준비
+- .github/workflows/backend-image.yml: main 기준 test → 이미지 빌드 + 컨테이너 smoke test →
+  GHCR :<commit SHA> push → k3s/backend.yaml 태그 갱신 커밋(Kanglish 방식).
+- k3s/backend.yaml(Deployment + Service, 전환기 NodePort 30081 유지), k3s/httproute.yaml
+  (default/web-gateway, listener web), deploy/argocd/alignfit.yaml(수동 sync), docs/deployment.md.
+- 추적 해제(디스크와 Git 기록엔 남음): data/raw/**, E01_P06_AF_VLL_GM.mp4, _uvicorn_demo.log,
+  .claude/settings.local.json. .gitignore 보강.
+- 연구 노트 → docs/research/, 스크린샷 → docs/screenshots/, mobiphysio_colab_extract_v2.py → src/.
+- 루트 README(UTF-16 깨짐) 재작성, backend/README.md, android/README.md 갱신.
+
+### 테스트
+- 검증 완료
+  - pytest 13 passed (scratchpad 임시 venv, Python 3.10, 기존 venv는 건드리지 않음)
+  - /predict 38초 영상: 원본 구현과 동일(570프레임, incorrect 0.565, E01 0.638, 추천 동일), 68s
+  - 오류 입력: 415/400/413, 포즈 없음 200 + pose_detected=false, 모델 실패 503, 해시 불일치 거부
+  - 사진 1600px 축소 영향 미미(어깨 0.1518→0.152, 골반 0.1069→0.1052, 방향 동일)
+  - 메모리(Windows): 기동 ~300MB, 요청 후 ~350MB → k8s 요청 512Mi / 제한 1536Mi
+  - Linux py3.11 의존성 해석(pip --dry-run): torch 2.3.1+cpu, CUDA 패키지 0, OpenCV 1개
+  - Android clean build: prodDebug / localDebug / prodRelease(unsigned) 성공,
+    APK 내 URL·패키지·cleartext 설정 확인
+- 미검증
+  - Docker 이미지 빌드/컨테이너 smoke(PC·WSL에 Docker 없음, WSL sudo 비밀번호 필요) → CI에 포함
+  - Android 실기기(연결된 기기 없음)
+  - GitHub Actions 실행(push 금지)
+- 참고: 3 variant 동시 빌드에서 Gradle heap 부족으로 1회 실패 → 순차 빌드로 성공. heap dump 삭제.
+
+## 상태
+- 전: ad62a1a (sleep-auto-001)
+- 후: 8813061 feat(backend) / e8a36e0 feat(android) / 1cb7c55 chore(deploy, cleanup) / 74321c1 chore(gradlew +x)
+- push 안 함. 홈서버/Caddy/Argo CD 변경 없음.
+
+## 미해결 / 다음 할 일
+1. 실기기 테스트: prodDebug APK 설치 → 사진 분석(운영 서버). 영상은 운영 서버에 /predict가 없으므로
+   localDebug + adb reverse tcp:8000 tcp:8000 + 로컬 백엔드로 확인.
+2. Docker 있는 환경에서 docker build backend/ + smoke test.
+3. 휴대폰 HEVC/회전 메타데이터 영상 미검증(OpenCV 4.9와 4.10의 프레임 방향 처리 차이 관찰됨).
+4. 홈서버 CPU 처리 시간 미측정(데스크톱 기준 영상 길이 × 1.5~2). 영상 추론 동시 1건.
+5. 추천 DB 내용·caution_message 영어, 인용 근거 TODO 상태.
+6. 공개 전: MobiPhysio 학습 가중치 공개 가능 여부 라이선스 확인, 48MB mp4는 Git 기록에 잔존.
+7. prodRelease 서명 설정 없음. CLAUDE.md는 초기 MVP 내용(C:\AlignFit 경로) 그대로.
+8. 루트 models/의 연구용 .pt 7개는 Git에 없음 → 별도 백업.
+9. 배포 순서(docs/deployment.md): integration push → main 생성·기본 브랜치 변경 → CI/GHCR 확인 →
+   kubectl -n alignfit get deploy,svc 로 기존 이름·30081 충돌 확인 → ghcr-pull Secret →
+   Gateway allowedRoutes에 alignfit 허용 → Argo CD 수동 sync(Caddy→NodePort 유지) →
+   Caddy/Traefik 타임아웃 180s+·본문 110MB → Caddy upstream 전환 → Service ClusterIP.
+
+---
+
+## 요청 #3 — 배포 전 최종 검증 + 홈서버 배포 준비 (2026-11-01)
+
+요청: integration에서만 작업, 기존 기능 유지, 배포 전 검증, 홈서버(Caddy 192.168.0.11 /
+k3s 192.168.0.60 / Traefik 30080 / Gateway default/web-gateway) 전환 자료 준비,
+docs/deployment-handoff.md 작성. push·서버 변경·새 worktree 금지. (사용자 취침 중 자율 진행)
+
+worker: claude / worktree: C:\Alignfit_integration\AlignFit-integration / branch: integration
+
+### 변경
+- k3s/backend.yaml: Deployment/Service 이름 alignfit-backend → alignfit-api, Service NodePort 30081 → ClusterIP.
+  이유: 서버의 기존 30081 리소스 이름을 모름. 같은 이름이면 Argo sync가 기존 NodePort를 ClusterIP로 바꿔
+  운영 경로가 끊기고, 다른 이름이면 30081 포트 충돌. 새 이름 + ClusterIP로 기존 스택 옆에 병행 → Caddy 한 줄로 전환/롤백.
+- k3s/httproute.yaml: backendRef alignfit-api, allowedRoutes 주석.
+- deploy/caddy/alignfit.Caddyfile.example(30081→30080 예시), deploy/rollback/legacy-nodeport-30081.yaml(비상 복귀).
+- docs/deployment-handoff.md 신규(서버 확인/검증됨/미검증 구분, 명령어, 롤백). docs/deployment.md·README 갱신.
+- Android: 404 시 FastAPI 원문 "Not Found" 대신 한국어 안내, connect timeout은 "연결할 수 없음"으로 구분
+  (에뮬레이터 E2E에서 발견). 커밋 2939762.
+
+### 검증
+- 검증 완료
+  - pytest 13 passed / 커밋된 모델 blob SHA256 일치 / WSL Linux sha256sum -c OK
+  - Docker COPY 대상(app/ models/ data/)만 git archive로 뽑아 단독 기동: /health video_model_loaded=true, 두 API 정상
+  - 회귀: 같은 사진을 새 백엔드와 현재 운영 서버에 전송 → 응답 필드 20개 전부 동일
+  - YAML 파싱(k3s, deploy, workflow), workflow smoke 스크립트 bash -n / python compile
+  - 저장소 public, GHCR alignfit-backend 익명 pull 가능(→ ghcr-pull Secret 불필요)
+  - Android 에뮬레이터(API 36.1) E2E:
+    prod 앱 → 운영 서버 사진 분석 → 결과 → 추천 운동 → 재활운동 평가 화면 이동 OK
+    prod 앱 영상 → 운영 서버에 /predict 없음 → 404 한국어 안내 OK
+    local 앱(10.0.2.2) → 로컬 백엔드 영상 평가 네이티브 결과(움직임 주의 필요, 어깨 벌림 동작, 추천 2개, 신뢰도 74%/93%, 120프레임)
+    백엔드 중지 시 "서버에 연결할 수 없습니다" / 24MP 18MB 사진 → 업로드 340KB, 응답 667KB, 2.5초, 크래시 없음
+    prod·local 앱 동시 설치 확인
+  - 최종 clean build: prodDebug(운영 URL만) / localDebug(127.0.0.1)
+- 미검증: Docker 실제 빌드(Docker 없음 → 첫 CI가 검증), Caddyfile 예시 문법(caddy 바이너리 다운로드가 권한 거부),
+  실기기, 홈서버 처리 시간/메모리, GitHub Actions 실행.
+- 참고: 에뮬레이터 실행 중 Kotlin daemon 크래시 1회(메모리) → Gradle 폴백으로 빌드 성공, 최종 빌드는 에뮬레이터 종료 후 다시 함.
+
+## 상태
+- 전: 74321c1 / 후: 2939762 fix(android) + 이 기록·배포 문서 커밋
+- push 안 함. 홈서버·Caddy·Argo CD 변경 없음.
+- 최종 APK: android/app/build/outputs/apk/prod/debug/app-prod-debug.apk (운영), .../local/debug/app-local-debug.apk (로컬)
+
+## 다음 할 일
+docs/deployment-handoff.md 순서대로: 2장 서버 확인 → 3장 push·main·CI·GHCR → 4장 allowedRoutes →
+5장 Argo 새 스택 + 30080 경유 테스트 → 6장 Caddy 전환 → 7장 정리.
+push 전 결정: public 저장소에 MobiPhysio 학습 가중치 공개 여부.

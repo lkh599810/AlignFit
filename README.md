@@ -27,7 +27,7 @@ backend/            FastAPI service = everything that ships in the Docker image
   data/             recommendation.sqlite (read-only at runtime)
   tests/            API contract tests (pytest)
 k3s/                Kubernetes manifests synced by Argo CD (Deployment, Service, HTTPRoute)
-deploy/argocd/      Argo CD Application (applied once by hand)
+deploy/             Argo CD Application, Caddy example, emergency rollback manifest
 .github/workflows/  CI: test -> image build + container smoke test -> GHCR -> manifest bump
 src/                research / training code (not deployed): datasets, features,
                     baselines, MLP / 1D-CNN training, Optuna tuning, ablation
@@ -83,8 +83,9 @@ Cleartext HTTP is allowed only in the `local` flavor.
 ## Deployment
 
 GitHub Actions → GHCR → Argo CD → k3s, same structure as the Kanglish project.
-See [docs/deployment.md](docs/deployment.md) (includes the NodePort 30081 →
-Traefik Gateway/HTTPRoute migration).
+See [docs/deployment.md](docs/deployment.md) and the step-by-step server runbook
+[docs/deployment-handoff.md](docs/deployment-handoff.md) (NodePort 30081 →
+Traefik Gateway/HTTPRoute migration, rollback).
 
 ## Model and data files
 

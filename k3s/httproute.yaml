@@ -1,7 +1,7 @@
 # Attaches to the shared Gateway (default/web-gateway, listener "web"), same as
-# Kanglish. The route lives in namespace `alignfit`, so the Gateway listener's
-# allowedRoutes must admit it (namespaces.from: All or a selector matching
-# alignfit) -- change that in the repo that manages the Gateway.
+# Kanglish. The route lives in namespace `alignfit` while the Gateway is in
+# `default`: the listener's allowedRoutes must admit `alignfit` (default is
+# `from: Same`, which rejects this route). See docs/deployment-handoff.md.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -22,7 +22,7 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: alignfit-backend
+        - name: alignfit-api
           port: 8000
 # Video analysis can take ~1 min on CPU: Traefik's entrypoint read/write
 # timeouts and Caddy's reverse_proxy timeouts must allow >= 180s, and request

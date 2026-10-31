@@ -1,0 +1,22 @@
+# Example only -- merge into the real Caddyfile on 192.168.0.11 by hand.
+# Compare with the existing alignfit-api block first (keep its other options).
+#
+# Before (current):  reverse_proxy 192.168.0.60:30081
+# After  (target):   reverse_proxy 192.168.0.60:30080   (Traefik -> Gateway -> HTTPRoute)
+alignfit-api.leekanghyun.co.kr {
+	# /predict accepts videos up to 100MB (ALIGNFIT_MAX_VIDEO_MB).
+	request_body {
+		max_size 110MB
+	}
+	# Caddy keeps the client's Host header by default, which the HTTPRoute
+	# `hostnames` match needs. Video analysis can take ~1-2 min on CPU.
+	reverse_proxy 192.168.0.60:30080 {
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 300s
+		}
+	}
+}
+
+# Rollback: change the upstream back to 192.168.0.60:30081, then
+#   caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
