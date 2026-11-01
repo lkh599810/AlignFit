@@ -16,11 +16,12 @@ spec:
     server: https://kubernetes.default.svc
     namespace: alignfit
   syncPolicy:
-    # Manual sync (live since 2026-11-01, Synced/Healthy). The stack runs beside
-    # the hand-made legacy resources (different names). Enable automated after
-    # a few days of stable operation, then retire the legacy 30081 stack.
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    # Auto sync: a main push that updates k3s/ (CI image-tag commit) deploys
+    # without a manual Sync. prune stays off: resources removed from Git are
+    # left running until deleted by hand.
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=false
