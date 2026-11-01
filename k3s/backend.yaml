@@ -32,9 +32,6 @@ spec:
         app.kubernetes.io/name: alignfit-api
         app.kubernetes.io/part-of: alignfit
     spec:
-      # Needed only while the GHCR package is private; harmless if absent.
-      imagePullSecrets:
-        - name: ghcr-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
