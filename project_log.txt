@@ -199,3 +199,21 @@ push 전 결정: public 저장소에 MobiPhysio 학습 가중치 공개 여부.
 ## 상태
 - integration push 완료(아래 커밋). 홈서버·Caddy·Argo CD 변경 없음.
 - 운영 배포 시 /predict는 503(가중치 마운트 전까지), 사진 분석은 영향 없음.
+
+---
+
+## 요청 #5 — 홈랩 Gateway 마이그레이션 완료 후 로컬 동기화 (2026-11-01)
+
+사용자 보고(서버): Gateway는 homelab-infra App 관리, allowedRoutes default+alignfit, Caddy 세 서비스 모두 30080,
+alignfit-api 운영, alignfit-backend + NodePort 30081 롤백용 유지, Argo 4개 App Synced/Healthy, HTTPS 200,
+alignfit 수동 sync. 서버·Argo·Caddy 변경 금지.
+
+### AlignFit
+- worktree `AlignFit-integration`을 로컬 `main`(origin/main 추적)으로 전환. `integration` 브랜치는 유지.
+- origin/main 확인: `8e64b16` CI 봇 태그 커밋(d947835), `fe68fc5` 사용자 커밋으로 `ghcr-pull` imagePullSecrets 제거 → 이미 반영됨.
+- 매니페스트 spec은 무변경. 주석만 최종 상태로 갱신(k3s/backend.yaml, deploy/argocd/alignfit.yaml).
+- 문서: deployment-handoff.md 10장(최종 결과/관리 범위/검증/배포/롤백/남은 일), deployment.md 현재 상태·모델 정책, README.
+- 확인: CI `workflow_dispatch` @ d947835 success, GHCR manifest 200, 운영 /health 200 `video_model_loaded:false`.
+
+### 남은 일
+- alignfit Auto Sync 활성화(안정화 후) → 30081 legacy 제거 → 원격 integration 브랜치 삭제.

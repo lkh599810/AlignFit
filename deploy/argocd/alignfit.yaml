@@ -16,8 +16,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: alignfit
   syncPolicy:
-    # Start manual: first sync must be watched (it adopts/replaces the
-    # hand-made resources). Enable automated after the first clean sync.
+    # Manual sync (live since 2026-11-01, Synced/Healthy). The stack runs beside
+    # the hand-made legacy resources (different names). Enable automated after
+    # a few days of stable operation, then retire the legacy 30081 stack.
     # automated:
     #   prune: true
     #   selfHeal: true

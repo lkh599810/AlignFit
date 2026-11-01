@@ -85,13 +85,14 @@ Cleartext HTTP is allowed only in the `local` flavor.
 GitHub Actions → GHCR → Argo CD → k3s, same structure as the Kanglish project.
 See [docs/deployment.md](docs/deployment.md) and the step-by-step server runbook
 [docs/deployment-handoff.md](docs/deployment-handoff.md) (NodePort 30081 →
-Traefik Gateway/HTTPRoute migration, rollback).
+Traefik Gateway/HTTPRoute migration, completed 2026-11-01; final state and rollback in section 10).
 
 ## Model and data files
 
 | What | Where | In Git | In image |
 |---|---|---|---|
-| Inference checkpoints (`mobi_mlp_*.pt`, ~75KB each), pose model | `backend/models/` | yes (+ `SHA256SUMS`) | yes |
+| Pose model (`pose_landmarker_lite.task`) + `SHA256SUMS` | `backend/models/` | yes | yes |
+| Trained MLP weights (`mobi_mlp_*.pt`, ~75KB each) | `backend/models/` (local only) | no (licence, gitignored) | no — `/predict` answers 503 until mounted |
 | Recommendation DB | `backend/data/recommendation.sqlite` | yes | yes |
 | Research checkpoints (`models/*.pt` at repo root) | regenerable via `src/` | no (gitignored) | no |
 | Raw third-party datasets (UI-PRMD, MobiPhysio videos) | `data/raw/`, `*.mp4` | no — licence not verified for redistribution | no |

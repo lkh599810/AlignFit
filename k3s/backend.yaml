@@ -9,10 +9,11 @@
 # The 40-zero tag is a placeholder: connect Argo CD only after the first CI
 # run has replaced it (otherwise the pod stays in ImagePullBackOff).
 #
-# Names are deliberately new (`alignfit-api`): the hand-made resources that
-# serve NodePort 30081 today are not touched, so both stacks run side by side
-# during the Caddy 30081 -> 30080 (Traefik Gateway) switch. Labels use only
-# app.kubernetes.io/* keys so no existing selector can match these pods.
+# Names are deliberately new (`alignfit-api`): the hand-made legacy resources
+# (Deployment `alignfit-backend` + NodePort 30081) were not touched and are kept
+# for rollback; Caddy now sends traffic to 30080 (Traefik Gateway) -> this
+# stack (2026-11-01). Labels use only app.kubernetes.io/* keys so no existing
+# selector can match these pods.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -83,7 +84,7 @@ spec:
               drop: [ALL]
 ---
 # ClusterIP only: traffic arrives via HTTPRoute (k3s/httproute.yaml). NodePort
-# 30081 stays on the old hand-made Service until it is retired.
+# 30081 stays on the legacy hand-made Service (rollback only) until it is retired.
 apiVersion: v1
 kind: Service
 metadata:

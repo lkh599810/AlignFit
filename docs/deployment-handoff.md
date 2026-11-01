@@ -1,6 +1,7 @@
 # AlignFit 홈서버 배포 인수인계
 
 작성: 2026-11-01, 기준 커밋: `integration` 브랜치 HEAD (push 전).
+**상태: 2026-11-01 운영 적용 완료. 최종 결과·운영·롤백은 10장.** 0~8장은 실행 기록으로 남긴다.
 이 문서는 실제 서버 작업을 하는 사람이 처음부터 끝까지 따라 할 수 있도록 쓴다.
 각 단계는 **확인 → 변경 → 검증 → (문제 시) 롤백** 순서다.
 
@@ -288,3 +289,57 @@ curl -s -o /dev/null -w '%{http_code}\n' http://192.168.0.60:30081/docs   # 이�
   원본 영상(48MB)·UI-PRMD 원본은 이미
   `origin/sleep-auto-001` 히스토리로 공개된 상태(이번 작업에서 tip에서는 추적 해제).
 - `prodRelease`는 서명 설정 없음(배포용 APK는 prodDebug 사용 중).
+
+## 10. 최종 배포 결과 (2026-11-01)
+
+운영 값은 사용자가 서버에서 확인해 보고한 것이다. GHCR/CI/HTTPS `/health` 응답은 로컬에서 공개 API로 재확인했다.
+
+### 이전 → 최종
+
+| 항목 | 이전 | 최종 |
+|---|---|---|
+| 경로 | Caddy → `192.168.0.60:30081` (NodePort, 수동 리소스 `alignfit-backend`) | Caddy → `192.168.0.60:30080` (Traefik) → Gateway `default/web-gateway` → HTTPRoute `alignfit/alignfit` → Service `alignfit-api` |
+| 배포 | 수동 | GitHub Actions → GHCR `:<SHA>` → `k3s/backend.yaml` 태그 커밋 → Argo CD `alignfit` (수동 sync) |
+| 이미지 | `:mobile-submission` (사진만) | `:d94783560326a0b66dfbaa0ca117912c32dd8b01` (사진 + `/health`, 영상은 가중치 미포함 503) |
+| Gateway 소유 | LKH_Portfolio `portfolio` App | `homelab-infra` App (Private 저장소, `Prune=false,Delete=false`), allowedRoutes `default`, `alignfit` |
+| `imagePullSecrets: ghcr-pull` | 있음(대비용) | 제거 (GHCR 패키지 public, 익명 pull) |
+
+롤백용으로 **유지**: Deployment `alignfit-backend` + NodePort Service `30081` (Argo CD 미관리).
+
+### Argo CD 관리 범위
+
+- `alignfit` (이 저장소 `main` / `k3s/`): Deployment·Service `alignfit-api`, HTTPRoute `alignfit`. **수동 sync**, Auto Sync 미활성.
+- `homelab-infra`: GatewayClass `traefik`, Gateway `default/web-gateway`.
+- `portfolio`, `kanglish`: 각자 서비스와 HTTPRoute만.
+- `deploy/`(Argo App 정의, Caddy 예시, 롤백 매니페스트)는 어떤 App도 sync하지 않는다.
+
+### 검증 결과
+
+- CI: `Backend image` `workflow_dispatch` @ `d947835` 성공 → GHCR `alignfit-backend:d947835…` manifest 존재(익명 조회 200) → 봇 커밋 `8e64b16`이 태그 갱신.
+- Argo CD `alignfit` Synced/Healthy (서버 보고).
+- `https://alignfit-api.leekanghyun.co.kr/health` → 200 `{"status":"ok","video_model_loaded":false}` (구 스택엔 `/health` 없음 → 신규 스택 응답).
+- Portfolio, Kanglish, AlignFit HTTPS 모두 200 (서버 보고).
+
+### 이후 배포 절차
+
+1. `backend/**` 변경을 `main`에 push (또는 Actions에서 Run workflow).
+2. CI: pytest → 이미지 빌드·smoke → GHCR push → `k3s/backend.yaml` 태그 커밋(`[skip ci]`).
+3. Argo CD `alignfit` → Diff 확인(이미지 태그만) → **Sync** (수동).
+4. 확인: `curl -s https://alignfit-api.leekanghyun.co.kr/health`, 앱 사진 분석.
+
+### 장애 시 롤백
+
+| 상황 | 복구 |
+|---|---|
+| 새 이미지 문제 | `k3s/backend.yaml` 태그를 이전 SHA로 되돌리는 커밋 → Argo Sync. 급하면 Argo UI History → Rollback. |
+| 신규 스택 전체 문제 | Caddy AlignFit upstream `30080` → `30081` (백업 → 수정 → `caddy validate` → `systemctl reload caddy`). 유지 중인 `alignfit-backend`로 즉시 복귀(사진 분석만). |
+| 30081 리소스까지 지운 뒤 | `kubectl apply -f deploy/rollback/legacy-nodeport-30081.yaml` → Caddy 30081. |
+| Gateway/Route 문제 | homelab-infra `docs/rollback.md` "최종 상태 기준 롤백". |
+
+### 추후 정리할 작업
+
+1. 며칠 안정 운영 후 `alignfit` Auto Sync 활성화 (`deploy/argocd/alignfit.yaml`의 `automated` 주석 해제 → `kubectl apply -n argocd`).
+2. 그 후 롤백용 `alignfit-backend` Deployment + NodePort 30081 제거 (7장).
+3. 원격 `integration` 브랜치 삭제 (main에 포함됨).
+4. 영상 기능을 켤 때: 가중치 라이선스 확인 후 Pod에 `/app/models/mobi_mlp_*.pt` 마운트, Traefik/Caddy 타임아웃 검토.
+5. 홈서버 메모리 실측(`kubectl top pod -n alignfit`)으로 requests/limits 재조정.
