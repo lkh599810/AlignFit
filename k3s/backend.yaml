@@ -41,7 +41,7 @@ spec:
         runAsGroup: 10001
       containers:
         - name: api
-          image: ghcr.io/lkh599810/alignfit-backend:0000000000000000000000000000000000000000
+          image: ghcr.io/lkh599810/alignfit-backend:d94783560326a0b66dfbaa0ca117912c32dd8b01
           ports:
             - name: http
               containerPort: 8000
