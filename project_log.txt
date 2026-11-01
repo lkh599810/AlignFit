@@ -172,3 +172,30 @@ worker: claude / worktree: C:\Alignfit_integration\AlignFit-integration / branch
 docs/deployment-handoff.md 순서대로: 2장 서버 확인 → 3장 push·main·CI·GHCR → 4장 allowedRoutes →
 5장 Argo 새 스택 + 30080 경유 테스트 → 6장 Caddy 전환 → 7장 정리.
 push 전 결정: public 저장소에 MobiPhysio 학습 가중치 공개 여부.
+
+---
+
+## 요청 #4 — 가중치 비공개 처리 후 push (2026-11-01)
+
+요청: 저장소가 public이므로 MobiPhysio 학습 가중치는 공개하지 않고 integration commit/push.
+영상 기능은 나중 확장용이라 지금 추가 검증/배포 대상 아님(사용자 확인).
+
+### 변경
+- 히스토리 재작성: ad62a1a..integration 6커밋에서 backend/models/mobi_mlp_*.pt 2개 제거
+  (git filter-branch --index-filter, push 전이라 원격 영향 없음). 커밋 해시 전부 바뀜.
+  재작성 전 상태는 로컬 브랜치 backup/integration-before-weight-removal(push 안 함, 가중치 포함).
+- 가중치 파일은 디스크에 그대로 둠(backend/models/, .gitignore 처리) → 로컬 영상 기능은 계속 동작.
+- tests: 가중치 없으면 영상 추론 테스트 skip, /health 기대값 = 가중치 유무.
+- CI: sha256sum -c --ignore-missing, 컨테이너 smoke는 video_model_loaded=false + /predict 503 기대
+  (공개 이미지에 가중치가 섞이면 CI가 실패 → 유출 방지 겸용).
+- k3s/backend.yaml 주석, docs/deployment-handoff.md(기대값 false/503, 9장) 갱신. 마운트 설정은 추가 안 함.
+
+### 검증
+- 재작성 후 모든 커밋 트리에 .pt 0개 확인.
+- pytest: 가중치 있음 11 passed / 2 skipped(실미디어 env 없음), 가중치 없음(CI 모사) 10 passed / 3 skipped.
+- 재작성 전 실사진+실영상 포함 13 passed(1회).
+- workflow / k3s YAML 파싱 OK.
+
+## 상태
+- integration push 완료(아래 커밋). 홈서버·Caddy·Argo CD 변경 없음.
+- 운영 배포 시 /predict는 503(가중치 마운트 전까지), 사진 분석은 영향 없음.

@@ -42,3 +42,5 @@ logs/*.log
 data/raw/
 *.mp4
 *.mov
+# Trained MLP weights: licence unclear, keep private (repo + GHCR image are public)
+backend/models/mobi_mlp_*.pt

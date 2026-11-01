@@ -26,7 +26,7 @@
 | 항목 | 결과 |
 |---|---|
 | ✅ 백엔드 pytest | 13/13 통과 (사진 실데이터, 영상 실데이터, 잘못된 입력 415/413/400, 포즈 없음, 모델 실패 503, 해시 불일치) |
-| ✅ 모델 무결성 | 커밋된 blob의 SHA256 = `backend/models/SHA256SUMS`, Linux(WSL) `sha256sum -c` OK |
+| ✅ 모델 무결성 | 커밋된 blob의 SHA256 = `backend/models/SHA256SUMS`, Linux(WSL) `sha256sum -c` OK. MLP 가중치(`mobi_mlp_*.pt`)는 라이선스 문제로 저장소·이미지에서 제외(9장) |
 | ✅ 영상 추론 동일성 | 38초 영상: 원본 intelligent 구현과 완전히 같은 결과 (570프레임, incorrect 0.565, E01 0.638) |
 | ✅ 사진 API 회귀 없음 | 같은 사진을 새 백엔드와 **현재 운영 서버**에 보내 응답 필드 20개가 전부 동일 |
 | ✅ 이미지 내용 | Dockerfile이 COPY하는 것(`app/ models/ data/`)만 git archive로 뽑아 그 폴더에서 서버 기동 → `/health` `video_model_loaded:true`, 두 API 정상 (저장소 다른 경로 의존 없음) |
@@ -199,7 +199,7 @@ Traefik 경유 직접 테스트 (Caddy 변경 전, LAN에서):
 ```bash
 H='Host: alignfit-api.leekanghyun.co.kr'
 curl -s -H "$H" http://192.168.0.60:30080/health
-#   {"status":"ok","video_model_loaded":true}
+#   {"status":"ok","video_model_loaded":false}   (가중치 미포함 → 정상, 9장)
 curl -s -H "$H" -F 'image=@posture.jpg;type=image/jpeg' http://192.168.0.60:30080/analyze/image | head -c 300; echo
 curl -s -H "$H" -F 'video=@exercise.mp4;type=video/mp4' -m 300 -w '\n%{http_code} %{time_total}s\n' \
   http://192.168.0.60:30080/predict | tail -c 400
@@ -225,13 +225,13 @@ sudo systemctl reload caddy
 
 ```bash
 curl -s https://alignfit-api.leekanghyun.co.kr/health
-#   새 스택: {"status":"ok","video_model_loaded":true}
+#   새 스택: {"status":"ok","video_model_loaded":false}   (가중치 미포함 → 정상)
 #   기존 스택이면 404 (구버전엔 /health 없음) → 전환 안 된 것
 curl -s https://alignfit-api.leekanghyun.co.kr/openapi.json | python3 -c 'import sys,json;print(list(json.load(sys.stdin)["paths"]))'
 #   ['/health', '/analyze/image', '/predict', '/demo']
 ```
 
-앱 확인: prodDebug APK 설치 → 사진 분석 → 추천 운동 → 재활운동 평가(영상) 결과 화면.
+앱 확인: prodDebug APK 설치 → 사진 분석 → 추천 운동. 재활운동 평가(영상)는 가중치 마운트 전까지 503 안내가 정상.
 
 롤백: `sudo cp /etc/caddy/Caddyfile.bak-<시각> /etc/caddy/Caddyfile && sudo systemctl reload caddy`
 → 즉시 기존 30081 스택으로 복귀(기존 리소스를 지우지 않았으므로).
@@ -281,7 +281,10 @@ curl -s -o /dev/null -w '%{http_code}\n' http://192.168.0.60:30081/docs   # 이�
 
 - 영상 추론은 전역 lock으로 동시 1건. 두 번째 요청은 대기(앱 read timeout 180s).
 - 추천 DB 내용·`caution_message`는 영어(연구 DB 그대로), 인용 `verify_citation` TODO.
-- 저장소가 **public**: integration을 push하면 MobiPhysio 학습 가중치(`backend/models/*.pt`)가 공개된다.
-  데이터셋 라이선스상 공개 가능한지 push 전에 결정. 원본 영상(48MB)·UI-PRMD 원본은 이미
+- 저장소·GHCR 이미지가 **public**이라 MobiPhysio 학습 가중치(`backend/models/mobi_mlp_*.pt`)는
+  push 전에 히스토리에서 제거하고 `.gitignore` 처리했다(2026-11-01). 그래서 CI 이미지에는 가중치가 없고
+  `/predict`는 503, `/health`는 `video_model_loaded:false`가 정상이다. 영상 기능은 나중에 확장할 때
+  가중치를 Pod의 `/app/models/`에 마운트(hostPath 등, SHA256SUMS로 검증)하면 켜진다. 사진 분석은 영향 없음.
+  원본 영상(48MB)·UI-PRMD 원본은 이미
   `origin/sleep-auto-001` 히스토리로 공개된 상태(이번 작업에서 tip에서는 추적 해제).
 - `prodRelease`는 서명 설정 없음(배포용 APK는 prodDebug 사용 중).

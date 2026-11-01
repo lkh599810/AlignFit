@@ -1,6 +1,8 @@
 # AlignFit API: FastAPI + MediaPipe + PyTorch CPU (image + video analysis).
-# Stateless: model checkpoints and the recommendation SQLite DB are baked into
-# the image (verified at load against models/SHA256SUMS), so no volume.
+# Stateless: pose model and recommendation SQLite DB are baked into the image.
+# The trained MLP weights (mobi_mlp_*.pt) are NOT in the repo or the public
+# image (licence), so /predict answers 503 until they are mounted into
+# /app/models (verified against models/SHA256SUMS). Photo analysis is unaffected.
 #
 # The image tag is the full commit SHA, rewritten by
 # .github/workflows/backend-image.yml after a tested image is published.

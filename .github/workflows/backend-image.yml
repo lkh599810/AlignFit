@@ -43,8 +43,8 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
           python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt
-      - name: Verify bundled model checksums
-        run: cd models && sha256sum -c SHA256SUMS
+      - name: Verify bundled model checksums (MLP weights are not in the repo)
+        run: cd models && sha256sum -c --ignore-missing SHA256SUMS
       - name: Run backend tests
         run: python -m pytest -q tests
 
@@ -74,7 +74,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Smoke test the container (models load, both APIs answer)
+      - name: Smoke test the container (image API answers, no MLP weights baked in)
         shell: bash
         run: |
           set -euo pipefail
@@ -87,19 +87,19 @@ jobs:
           docker exec alignfit-smoke python -c 'import os; assert os.getuid() == 10001'
           curl --fail --silent --show-error --retry 30 --retry-all-errors \
             --retry-delay 2 --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health \
-            | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d == {"status": "ok", "video_model_loaded": True}, d'
+            | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d == {"status": "ok", "video_model_loaded": False}, d'
           # Invalid image -> 400 (image pipeline reachable).
           code=$(curl -s -o /dev/null -w '%{http_code}' -F 'image=@/etc/hostname;type=image/jpeg' http://127.0.0.1:8000/analyze/image)
           test "$code" = 400
-          # Blank 2s video -> 200 with pose_detected=false (video decode + models run).
+          # Blank 2s video -> 503: weights are not in the public image (licence).
           docker exec alignfit-smoke python -c '
           import cv2, numpy as np
           w = cv2.VideoWriter("/tmp/blank.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 10, (160, 120))
           [w.write(np.zeros((120, 160, 3), np.uint8)) for _ in range(20)]
           w.release()'
           docker cp alignfit-smoke:/tmp/blank.mp4 /tmp/blank.mp4
-          curl --fail --silent --show-error -F 'video=@/tmp/blank.mp4;type=video/mp4' http://127.0.0.1:8000/predict \
-            | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d["pose_detected"] is False and d["caution_message"], d'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -F 'video=@/tmp/blank.mp4;type=video/mp4' http://127.0.0.1:8000/predict)
+          test "$code" = 503
           echo "container smoke test: OK"
       - name: Log in to GHCR
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'lkh599810/AlignFit'

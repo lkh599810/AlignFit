@@ -17,6 +17,10 @@ from app.services import ml_quality_service as ml
 
 TEST_IMAGE = os.environ.get("ALIGNFIT_TEST_IMAGE")
 TEST_VIDEO = os.environ.get("ALIGNFIT_TEST_VIDEO")
+# Trained MLP weights are not committed (licence); video-model tests need them locally.
+WEIGHTS_PRESENT = all(os.path.exists(os.path.join(ml.MODELS_DIR, f))
+                      for f in (ml.BINARY_MODEL_FILE, ml.EXERCISE_MODEL_FILE))
+needs_weights = pytest.mark.skipif(not WEIGHTS_PRESENT, reason="video model weights not present")
 
 
 @pytest.fixture(scope="module")
@@ -39,10 +43,10 @@ def _post_video(client, data, name="clip.mp4", ctype="video/mp4"):
     return client.post("/predict", files={"video": (name, data, ctype)})
 
 
-def test_health_reports_model_loaded(client):
+def test_health_reports_model_state(client):
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "video_model_loaded": True}
+    assert r.json() == {"status": "ok", "video_model_loaded": WEIGHTS_PRESENT}
 
 
 def test_image_invalid_bytes_400(client):
@@ -89,6 +93,7 @@ def test_video_too_long_400(client, monkeypatch):
     assert r.status_code == 400 and "너무 깁니다" in r.json()["detail"]
 
 
+@needs_weights
 def test_video_no_pose_returns_safe_response(client):
     r = _post_video(client, _blank_video())
     assert r.status_code == 200
@@ -110,6 +115,7 @@ def test_checksum_mismatch_rejected():
         ml._read_verified(ml.BINARY_MODEL_FILE, {ml.BINARY_MODEL_FILE: "0" * 64})
 
 
+@needs_weights
 @pytest.mark.skipif(not TEST_VIDEO, reason="ALIGNFIT_TEST_VIDEO not set")
 def test_video_real_exercise(client):
     with open(TEST_VIDEO, "rb") as f:
