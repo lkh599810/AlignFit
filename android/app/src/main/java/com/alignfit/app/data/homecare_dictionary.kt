@@ -34,6 +34,10 @@ data class ExerciseItem(
     val reason: String,
     val caution: String,
     val youtubeQuery: String,
+    // Suggested amount and step-by-step how-to shown with the demo animation
+    // (assets/exercise_animations.json, keyed by id).
+    val dose: String = "",
+    val steps: List<String> = emptyList(),
     // Fixed video id, if curated. Do not fill with unverified ids — when null,
     // the UI falls back to a placeholder preview plus the YouTube search link.
     val youtubeVideoId: String? = null
@@ -267,7 +271,13 @@ object HomecareDictionary {
             englishName = "Chin Tuck",
             reason = "머리가 앞으로 나온 자세 패턴 완화와 목 정렬에 도움이 될 가능성이 있습니다.",
             caution = "목에 통증이 느껴지면 즉시 중단하세요. 과도하게 힘을 주지 마세요.",
-            youtubeQuery = "chin tuck exercise 거북목 운동"
+            youtubeQuery = "chin tuck exercise 거북목 운동",
+            dose = "5초 유지 × 10회",
+            steps = listOf(
+                "허리를 펴고 바르게 서거나 앉습니다.",
+                "시선은 정면을 유지한 채 턱을 뒤로 밀어 '이중턱'을 만듭니다.",
+                "목 뒤가 길어지는 느낌으로 5초 유지한 뒤 천천히 돌아옵니다."
+            )
         ),
         ExerciseItem(
             id = "thoracic_extension",
@@ -275,7 +285,13 @@ object HomecareDictionary {
             englishName = "Thoracic Extension",
             reason = "굽은 등과 상체 정렬 개선에 도움이 될 가능성이 있습니다.",
             caution = "허리를 과도하게 젖히지 말고 등 윗부분 위주로 움직이세요.",
-            youtubeQuery = "thoracic extension exercise 흉추 가동성"
+            youtubeQuery = "thoracic extension exercise 흉추 가동성",
+            dose = "10회 × 2세트",
+            steps = listOf(
+                "의자에 앉아 양손을 머리 뒤에 가볍게 깍지 낍니다.",
+                "숨을 들이마시며 가슴을 위로 열고 등 윗부분을 뒤로 젖힙니다.",
+                "허리는 고정한 채 천천히 처음 자세로 돌아옵니다."
+            )
         ),
         ExerciseItem(
             id = "scapular_retraction",
@@ -283,7 +299,13 @@ object HomecareDictionary {
             englishName = "Scapular Retraction",
             reason = "어깨 주변 안정성과 좌우 균형 유지에 도움이 될 가능성이 있습니다.",
             caution = "어깨를 으쓱 올리지 말고 날개뼈를 뒤로 모으는 느낌으로 하세요.",
-            youtubeQuery = "scapular retraction exercise 견갑골 운동"
+            youtubeQuery = "scapular retraction exercise 견갑골 운동",
+            dose = "5초 유지 × 10회",
+            steps = listOf(
+                "바르게 서서 팔꿈치를 90도로 굽혀 옆구리에 붙입니다.",
+                "어깨를 으쓱하지 않고 팔꿈치를 뒤로 당기며 날개뼈를 모읍니다.",
+                "5초 유지한 뒤 힘을 풀고 천천히 돌아옵니다."
+            )
         ),
         ExerciseItem(
             id = "pec_stretch",
@@ -291,7 +313,13 @@ object HomecareDictionary {
             englishName = "Pec Stretch",
             reason = "가슴 근육의 긴장을 풀어 어깨가 말린 패턴 완화에 도움이 될 가능성이 있습니다.",
             caution = "어깨 앞쪽에 찌릿한 통증이 느껴지면 강도를 줄이세요.",
-            youtubeQuery = "pec stretch doorway 가슴 스트레칭"
+            youtubeQuery = "pec stretch doorway 가슴 스트레칭",
+            dose = "20~30초 유지 × 2~3회",
+            steps = listOf(
+                "벽 옆에 서서 한쪽 팔을 뒤로 뻗어 손바닥을 벽에 댑니다.",
+                "몸통을 벽 반대쪽 앞으로 천천히 기울입니다.",
+                "가슴 앞쪽이 늘어나는 느낌에서 유지한 뒤 반대쪽도 합니다."
+            )
         ),
         ExerciseItem(
             id = "glute_bridge",
@@ -299,7 +327,13 @@ object HomecareDictionary {
             englishName = "Glute Bridge",
             reason = "엉덩이와 허리 주변 근육을 강화해 골반 안정에 도움이 될 가능성이 있습니다.",
             caution = "허리를 과도하게 꺾지 말고 엉덩이 힘으로 들어 올리세요.",
-            youtubeQuery = "glute bridge exercise 브릿지 운동"
+            youtubeQuery = "glute bridge exercise 브릿지 운동",
+            dose = "10~12회 × 2세트",
+            steps = listOf(
+                "바닥에 누워 무릎을 세우고 발을 골반 너비로 둡니다.",
+                "엉덩이에 힘을 주며 어깨~무릎이 일직선이 될 때까지 들어 올립니다.",
+                "2초 유지 후 척추를 하나씩 내려놓듯 천천히 내려옵니다."
+            )
         ),
         ExerciseItem(
             id = "dead_bug",
@@ -307,7 +341,13 @@ object HomecareDictionary {
             englishName = "Dead Bug",
             reason = "허리에 부담을 적게 주면서 코어 안정성을 기르는 데 도움이 될 가능성이 있습니다.",
             caution = "허리가 바닥에서 뜨지 않는 범위에서만 팔다리를 움직이세요.",
-            youtubeQuery = "dead bug exercise 데드버그"
+            youtubeQuery = "dead bug exercise 데드버그",
+            dose = "좌우 번갈아 8~10회 × 2세트",
+            steps = listOf(
+                "누워서 양팔은 천장으로, 무릎은 90도로 들어 올립니다.",
+                "허리를 바닥에 붙인 채 한쪽 팔과 반대쪽 다리를 천천히 뻗습니다.",
+                "처음 자세로 돌아와 반대쪽도 번갈아 진행합니다."
+            )
         ),
         ExerciseItem(
             id = "bird_dog",
@@ -315,7 +355,13 @@ object HomecareDictionary {
             englishName = "Bird Dog",
             reason = "척추 안정화와 몸통 좌우 균형 향상에 도움이 될 가능성이 있습니다.",
             caution = "골반이 좌우로 흔들리지 않게 천천히 진행하세요.",
-            youtubeQuery = "bird dog exercise 버드독"
+            youtubeQuery = "bird dog exercise 버드독",
+            dose = "좌우 번갈아 8~10회 × 2세트",
+            steps = listOf(
+                "손은 어깨 아래, 무릎은 골반 아래에 두고 네발 자세를 만듭니다.",
+                "한쪽 팔과 반대쪽 다리를 바닥과 평행하게 뻗습니다.",
+                "2초 유지 후 돌아와 반대쪽도 번갈아 진행합니다."
+            )
         ),
         ExerciseItem(
             id = "side_plank",
@@ -323,7 +369,13 @@ object HomecareDictionary {
             englishName = "Side Plank",
             reason = "몸통 측면 근육을 강화해 좌우 균형 유지에 도움이 될 가능성이 있습니다.",
             caution = "어깨나 손목에 통증이 있으면 무릎을 대고 강도를 낮추세요.",
-            youtubeQuery = "side plank exercise 사이드 플랭크"
+            youtubeQuery = "side plank exercise 사이드 플랭크",
+            dose = "15~30초 유지 × 좌우 2회",
+            steps = listOf(
+                "옆으로 누워 팔꿈치를 어깨 바로 아래에 둡니다.",
+                "골반을 들어 머리부터 발까지 일직선을 만듭니다.",
+                "버틸 수 있는 만큼 유지한 뒤 내려오고 반대쪽도 합니다."
+            )
         ),
         ExerciseItem(
             id = "hip_flexor_stretch",
@@ -331,7 +383,13 @@ object HomecareDictionary {
             englishName = "Hip Flexor Stretch",
             reason = "고관절 앞쪽 긴장을 풀어 골반 정렬에 도움이 될 가능성이 있습니다.",
             caution = "허리를 과도하게 젖히지 말고 골반을 살짝 뒤로 말아 유지하세요.",
-            youtubeQuery = "hip flexor stretch 고관절 스트레칭"
+            youtubeQuery = "hip flexor stretch 고관절 스트레칭",
+            dose = "20~30초 유지 × 좌우 2회",
+            steps = listOf(
+                "한쪽 무릎을 바닥에 대고 반대쪽 발은 앞에 두는 런지 자세를 만듭니다.",
+                "상체를 세운 채 골반을 앞으로 천천히 밀어 줍니다.",
+                "뒤쪽 다리의 고관절 앞이 늘어나는 느낌에서 유지합니다."
+            )
         ),
         ExerciseItem(
             id = "hamstring_stretch",
@@ -339,7 +397,13 @@ object HomecareDictionary {
             englishName = "Hamstring Stretch",
             reason = "허벅지 뒤쪽 긴장을 풀어 골반과 허리 부담 완화에 도움이 될 가능성이 있습니다.",
             caution = "반동을 주지 말고 천천히 늘려 주세요.",
-            youtubeQuery = "hamstring stretch 햄스트링 스트레칭"
+            youtubeQuery = "hamstring stretch 햄스트링 스트레칭",
+            dose = "20~30초 유지 × 2~3회",
+            steps = listOf(
+                "바닥에 앉아 두 다리를 앞으로 곧게 뻗습니다.",
+                "허리를 편 상태로 골반부터 숙이며 손을 발끝 쪽으로 뻗습니다.",
+                "허벅지 뒤가 당기는 지점에서 반동 없이 유지합니다."
+            )
         ),
         ExerciseItem(
             id = "calf_stretch",
@@ -347,7 +411,13 @@ object HomecareDictionary {
             englishName = "Calf Stretch",
             reason = "종아리와 발목 주변 유연성 향상에 도움이 될 가능성이 있습니다.",
             caution = "발목에 통증이 있으면 강도를 줄이고 천천히 진행하세요.",
-            youtubeQuery = "calf stretch 종아리 스트레칭"
+            youtubeQuery = "calf stretch 종아리 스트레칭",
+            dose = "20~30초 유지 × 좌우 2회",
+            steps = listOf(
+                "벽을 마주 보고 서서 양손을 벽에 댑니다.",
+                "한쪽 다리를 뒤로 빼고 뒤꿈치를 바닥에 붙입니다.",
+                "앞 무릎을 굽혀 몸을 벽 쪽으로 기울이며 종아리를 늘립니다."
+            )
         ),
         ExerciseItem(
             id = "clamshell",
@@ -355,7 +425,13 @@ object HomecareDictionary {
             englishName = "Clamshell",
             reason = "엉덩이 옆쪽(중둔근) 근육을 활성화해 골반 안정에 도움이 될 가능성이 있습니다.",
             caution = "골반이 뒤로 넘어가지 않게 고정하고 엉덩이 힘으로 무릎을 여세요.",
-            youtubeQuery = "clamshell hip exercise 클램쉘 운동"
+            youtubeQuery = "clamshell hip exercise 클램쉘 운동",
+            dose = "12~15회 × 좌우 2세트",
+            steps = listOf(
+                "옆으로 누워 무릎을 45도 정도 굽히고 두 발을 붙입니다.",
+                "발은 붙인 채 위쪽 무릎을 조개처럼 천천히 엽니다.",
+                "골반이 뒤로 넘어가지 않게 유지하며 천천히 닫습니다."
+            )
         ),
         ExerciseItem(
             id = "quad_strengthening",
@@ -363,7 +439,13 @@ object HomecareDictionary {
             englishName = "Quadriceps Strengthening",
             reason = "허벅지 앞쪽 근육을 강화해 무릎 주변 부담 완화에 도움이 될 가능성이 있습니다.",
             caution = "무릎에 통증이 느껴지면 가동 범위를 줄이고 천천히 진행하세요.",
-            youtubeQuery = "quadriceps strengthening exercise 허벅지 앞 근력 운동"
+            youtubeQuery = "quadriceps strengthening exercise 허벅지 앞 근력 운동",
+            dose = "10~12회 × 좌우 2세트",
+            steps = listOf(
+                "의자에 바르게 앉아 두 발을 바닥에 둡니다.",
+                "한쪽 무릎을 펴서 다리를 앞으로 곧게 들어 올립니다.",
+                "허벅지 앞에 힘을 준 채 2초 유지 후 천천히 내립니다."
+            )
         ),
         ExerciseItem(
             id = "ankle_mobility",
@@ -371,7 +453,13 @@ object HomecareDictionary {
             englishName = "Ankle Mobility",
             reason = "발목 관절의 움직임 범위를 넓혀 종아리·발목 부담 완화에 도움이 될 가능성이 있습니다.",
             caution = "통증이 느껴지는 범위까지 무리해서 움직이지 마세요.",
-            youtubeQuery = "ankle mobility exercise 발목 가동성 운동"
+            youtubeQuery = "ankle mobility exercise 발목 가동성 운동",
+            dose = "10회 × 좌우 2세트",
+            steps = listOf(
+                "벽 앞에 서서 한 발을 앞에 두고 발바닥 전체를 붙입니다.",
+                "뒤꿈치를 떼지 않고 무릎을 벽 쪽으로 천천히 밀어 줍니다.",
+                "발목이 편안한 범위까지만 움직인 뒤 돌아옵니다."
+            )
         ),
         ExerciseItem(
             id = "single_leg_balance",
@@ -379,7 +467,13 @@ object HomecareDictionary {
             englishName = "Single Leg Balance",
             reason = "한 발로 서는 균형 훈련으로 발목 안정성과 하체 좌우 균형에 도움이 될 가능성이 있습니다.",
             caution = "넘어지지 않도록 벽이나 의자를 가까이 두고 진행하세요.",
-            youtubeQuery = "single leg balance exercise 한 발 균형 운동"
+            youtubeQuery = "single leg balance exercise 한 발 균형 운동",
+            dose = "20~30초 × 좌우 2회",
+            steps = listOf(
+                "벽이나 의자 옆에 바르게 섭니다.",
+                "한쪽 무릎을 골반 높이까지 천천히 들어 올립니다.",
+                "몸이 흔들리지 않게 유지한 뒤 반대쪽도 합니다."
+            )
         ),
         ExerciseItem(
             id = "neck_side_stretch",
@@ -387,7 +481,55 @@ object HomecareDictionary {
             englishName = "Neck Side Stretch",
             reason = "목 옆 근육의 긴장을 풀어 머리 기울어짐 패턴 완화에 도움이 될 가능성이 있습니다.",
             caution = "손으로 머리를 세게 당기지 말고 무게만 살짝 얹으세요.",
-            youtubeQuery = "neck side stretch 목 스트레칭"
+            youtubeQuery = "neck side stretch 목 스트레칭",
+            dose = "15~20초 유지 × 좌우 2회",
+            steps = listOf(
+                "바르게 서거나 앉아 어깨 힘을 뺍니다.",
+                "머리를 한쪽으로 기울이고 같은 쪽 손을 머리 위에 가볍게 얹습니다.",
+                "반대쪽 목 옆이 늘어나는 느낌에서 유지합니다."
+            )
+        ),
+        ExerciseItem(
+            id = "cat_camel",
+            koreanName = "고양이-낙타 자세",
+            englishName = "Cat-Camel",
+            reason = "척추를 부드럽게 굽히고 펴서 허리·등 주변 뻣뻣함 완화에 도움이 될 가능성이 있습니다.",
+            caution = "통증이 없는 범위에서 호흡에 맞춰 천천히 움직이세요.",
+            youtubeQuery = "cat camel exercise 고양이 낙타 자세",
+            dose = "8~10회 × 2세트",
+            steps = listOf(
+                "손은 어깨 아래, 무릎은 골반 아래에 두고 네발 자세를 만듭니다.",
+                "숨을 내쉬며 등을 둥글게 말아 올리고 고개를 숙입니다.",
+                "숨을 들이마시며 등을 부드럽게 내리고 시선을 앞으로 둡니다."
+            )
+        ),
+        ExerciseItem(
+            id = "wall_angel",
+            koreanName = "월 엔젤",
+            englishName = "Wall Angel",
+            reason = "어깨와 등 윗부분 정렬을 도와 굽은 어깨 패턴 완화에 도움이 될 가능성이 있습니다.",
+            caution = "허리가 벽에서 과도하게 뜨지 않게 하고, 어깨가 불편하면 범위를 줄이세요.",
+            youtubeQuery = "wall angel exercise 월엔젤",
+            dose = "8~10회 × 2세트",
+            steps = listOf(
+                "벽에 등과 뒤통수를 대고 섭니다.",
+                "팔꿈치를 90도로 굽혀 'W' 모양으로 벽에 댑니다.",
+                "팔을 벽에서 떼지 않고 'Y' 모양으로 천천히 올렸다 내립니다."
+            )
+        ),
+        ExerciseItem(
+            id = "pelvic_tilt",
+            koreanName = "골반 기울이기",
+            englishName = "Pelvic Tilt",
+            reason = "허리 주변 근육을 부드럽게 쓰며 골반 움직임 인지에 도움이 될 가능성이 있습니다.",
+            caution = "엉덩이를 높이 들지 말고 허리를 바닥 쪽으로 누르는 느낌만 유지하세요.",
+            youtubeQuery = "pelvic tilt exercise 골반 기울이기 운동",
+            dose = "5초 유지 × 10회",
+            steps = listOf(
+                "바닥에 누워 무릎을 세웁니다.",
+                "배에 힘을 주며 허리를 바닥 쪽으로 눌러 골반을 살짝 말아 올립니다.",
+                "5초 유지 후 힘을 풀고 원래 자세로 돌아옵니다."
+            )
         )
     )
 
@@ -433,9 +575,9 @@ object HomecareDictionary {
             feedbackTitle = "어깨·목 부위 맞춤 추천",
             feedbackBody = "선택하신 어깨·목 부위와 자세 결과를 함께 보면 이 부위 근육이 긴장되어 있을 가능성이 있습니다. " +
                 "그래서 목 정렬을 돕는 턱 당기기, 굽은 어깨를 펴는 가슴 스트레칭과 견갑골 모으기, " +
-                "등 윗부분을 펴는 흉추 신전 운동을 골랐습니다.",
+                "등 윗부분을 펴는 흉추 신전 운동과 월 엔젤을 골랐습니다.",
             exerciseIds = listOf(
-                "chin_tuck", "pec_stretch", "scapular_retraction", "thoracic_extension"
+                "chin_tuck", "pec_stretch", "scapular_retraction", "thoracic_extension", "wall_angel"
             )
         ),
         RecommendationRule(
@@ -452,8 +594,8 @@ object HomecareDictionary {
             feedbackTitle = "허리·코어 부위 맞춤 추천",
             feedbackBody = "선택하신 허리·옆구리 부위로 보아 허리 주변에 부담이 쌓였을 가능성이 있습니다. " +
                 "그래서 허리에 부담이 적은 코어 안정화 운동인 데드버그·버드독과, " +
-                "몸통 측면을 잡아주는 사이드 플랭크, 엉덩이 들기를 골랐습니다.",
-            exerciseIds = listOf("dead_bug", "bird_dog", "side_plank", "glute_bridge")
+                "허리를 부드럽게 풀어주는 고양이-낙타 자세·골반 기울이기, 엉덩이 들기를 골랐습니다.",
+            exerciseIds = listOf("dead_bug", "bird_dog", "cat_camel", "pelvic_tilt", "glute_bridge")
         ),
         RecommendationRule(
             id = "hip_pelvis_pattern",
@@ -683,7 +825,13 @@ object HomecareDictionary {
                     rule.svgRegionIds.any { it in selectedSvgRegionIds } ||
                     rule.postureFlags.any { it in postureFlags }
             }
-            .sortedByDescending { it.priority }
+            // Rules the user picked (pain / body map) lead; photo-only matches follow.
+            .sortedWith(
+                compareByDescending<RecommendationRule> { rule ->
+                    rule.painIds.any { it in selectedPainIds } ||
+                        rule.svgRegionIds.any { it in selectedSvgRegionIds }
+                }.thenByDescending { it.priority }
+            )
 
         val activeRules = matched.ifEmpty { listOf(DEFAULT_RULE) }
         val feedbackCards = activeRules.take(2)

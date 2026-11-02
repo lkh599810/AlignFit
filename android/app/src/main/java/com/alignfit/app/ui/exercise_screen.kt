@@ -184,9 +184,11 @@ private fun ExerciseCard(exercise: ExerciseItem) {
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // YouTube-style preview area: thumbnail when a fixed video id exists,
-            // otherwise a placeholder preview that opens the search results.
-            if (watchUrl != null && thumbnailUrl != null) {
+            // Looping demo animation when keyframes exist; otherwise the
+            // YouTube thumbnail / search placeholder as before.
+            if (hasExerciseAnimation(context, exercise.id)) {
+                ExerciseAnimation(exerciseId = exercise.id)
+            } else if (watchUrl != null && thumbnailUrl != null) {
                 YoutubeThumbnailPreview(
                     thumbnailUrl = thumbnailUrl,
                     onClick = { openUrl(watchUrl) }
@@ -197,6 +199,44 @@ private fun ExerciseCard(exercise: ExerciseItem) {
                     searchQuery = exercise.youtubeQuery,
                     onClick = { openUrl(searchUrl) }
                 )
+            }
+
+            if (exercise.dose.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = exercise.dose,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(50)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+            if (exercise.steps.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                exercise.steps.forEachIndexed { index, step ->
+                    Row(modifier = Modifier.padding(vertical = 3.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${index + 1}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = step, fontSize = 13.sp, lineHeight = 18.sp)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
