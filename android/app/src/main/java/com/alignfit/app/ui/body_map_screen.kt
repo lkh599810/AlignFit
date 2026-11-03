@@ -3,6 +3,8 @@ package com.alignfit.app.ui
 import android.content.Context
 import android.util.Xml
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -153,7 +156,7 @@ private fun polygonContains(points: List<Offset>, x: Float, y: Float): Boolean {
     return inside
 }
 
-// ─── Page 3: Body Map Selection ──────────────────────────────────────────────
+// ─── Step 2: Body Map Selection ───────────────────────────────────────────────
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -171,75 +174,68 @@ fun BodyMapSelectionScreen(
     }
     var currentView by remember { mutableStateOf(BodyMapView.FRONT) }
 
-    val baseColor = Color(0xFFE1EAE9)
-    val outlineColor = Color(0xFFB9C9C7)
+    val baseColor = Color(0xFFEDEDED)
+    val outlineColor = Color(0xFFC7C7C7)
     val seamColor = Color.White
-    val selectedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+    val selectedColor = Ink
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "그림에서 부위 선택", onBack = onBack)
+        SubPageHeader(
+            title = "그림에서 짚어 주세요",
+            subtitle = "불편한 곳을 탭하면 선택되고, 다시 탭하면 해제돼요.",
+            onBack = onBack,
+            step = 2
+        )
 
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = ScreenPadding)
         ) {
-            Text(
-                text = "그림에서 불편한 부위를 직접 선택해 주세요.",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "여러 부위를 선택할 수 있고, 다시 탭하면 해제됩니다.",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
-            )
-
-            TabRow(selectedTabIndex = currentView.ordinal) {
+            // Segmented view switcher
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Tint)
+                    .padding(4.dp)
+            ) {
                 BodyMapView.values().forEach { view ->
-                    Tab(
-                        selected = currentView == view,
-                        onClick = { currentView = view },
-                        text = { Text(view.label, fontSize = 13.sp) }
-                    )
+                    val selected = currentView == view
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selected) Paper else Tint)
+                            .clickable { currentView = view }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            view.label,
+                            fontSize = 13.sp,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (selected) Ink else InkSoft
+                        )
+                    }
                 }
             }
 
-            if (currentView == BodyMapView.FRONT) {
-                Text(
-                    text = "정면 그림은 거울을 보듯 화면 왼쪽이 내 몸의 왼쪽입니다.",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = if (currentView == BodyMapView.FRONT) "거울을 보듯 화면 왼쪽이 내 몸의 왼쪽이에요." else " ",
+                fontSize = 12.sp,
+                color = InkFaint,
+                modifier = Modifier.padding(top = 8.dp)
+            )
 
             val map = bodyMaps[currentView]
             if (map == null) {
-                Text(
-                    text = "바디맵 리소스를 불러오지 못했습니다.",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
+                NoteBox("바디맵 리소스를 불러오지 못했습니다.", modifier = Modifier.padding(top = 16.dp))
             } else {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
                 Canvas(
                     modifier = Modifier
-                        .fillMaxWidth(0.78f)
+                        .fillMaxWidth(0.62f)
                         .align(Alignment.CenterHorizontally)
                         .padding(vertical = 12.dp)
                         .aspectRatio(map.viewBoxWidth / map.viewBoxHeight)
@@ -295,55 +291,32 @@ fun BodyMapSelectionScreen(
                         map.layers.drop(1).forEach { drawLayer(it) }
                     }
                 }
-                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             if (selectedRegions.isNotEmpty()) {
-                Text(
-                    text = "선택한 부위 (탭하면 해제됩니다)",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 6.dp)
-                )
+                SectionLabel("선택한 부위 · 탭하면 해제")
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     selectedRegions.sorted().forEach { id ->
-                        AssistChip(
-                            onClick = { onRegionToggled(id) },
-                            label = { Text(HomecareDictionary.svgRegionLabel(id), fontSize = 12.sp) }
+                        SelectPill(
+                            text = HomecareDictionary.svgRegionLabel(id) + "  ×",
+                            selected = true,
+                            onClick = { onRegionToggled(id) }
                         )
                     }
                 }
-            } else {
-                Text(
-                    text = "아직 선택한 부위가 없습니다. 선택하지 않고 다음으로 진행할 수도 있습니다.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            SecondaryButton(
-                text = "이전",
-                onClick = onBack,
-                modifier = Modifier.weight(1f)
-            )
+        BottomActions {
             PrimaryButton(
-                text = "다음",
+                text = if (selectedRegions.isEmpty()) "건너뛰기" else "다음 (${selectedRegions.size}곳 선택)",
                 onClick = onNext,
-                modifier = Modifier.weight(2f)
+                modifier = Modifier.weight(1f)
             )
         }
     }

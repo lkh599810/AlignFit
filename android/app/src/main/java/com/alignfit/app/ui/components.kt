@@ -1,23 +1,33 @@
 package com.alignfit.app.ui
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // ─── Shared UI building blocks ────────────────────────────────────────────────
-// Reused across screens so buttons, subtitles, and spacing stay consistent and
-// every page feels like the same app.
+// One visual language for every screen: big bold titles, flat gray panels,
+// black primary actions, hairline borders.
 
-// Filled primary call-to-action button.
+internal val ScreenPadding = 20.dp
+
 @Composable
 fun PrimaryButton(
     text: String,
@@ -28,14 +38,19 @@ fun PrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(14.dp)
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Ink,
+            contentColor = Paper,
+            disabledContainerColor = Hairline,
+            disabledContentColor = InkFaint
+        )
     ) {
         Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
-// Outlined secondary button for lower-emphasis actions.
 @Composable
 fun SecondaryButton(
     text: String,
@@ -46,21 +61,207 @@ fun SecondaryButton(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(14.dp)
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Hairline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink)
     ) {
         Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
     }
 }
 
-// Consistent subtitle / helper text style used under screen titles.
 @Composable
 fun ScreenSubtitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        fontSize = 13.sp,
-        lineHeight = 19.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
+        color = InkSoft,
         modifier = modifier
     )
+}
+
+// Tab-root header: large bold title, optional subtitle.
+@Composable
+fun PageHeader(title: String, subtitle: String? = null) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = ScreenPadding, end = ScreenPadding, top = 28.dp, bottom = 16.dp)
+    ) {
+        Text(title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Ink, lineHeight = 36.sp)
+        if (subtitle != null) {
+            Spacer(Modifier.height(6.dp))
+            ScreenSubtitle(subtitle)
+        }
+    }
+}
+
+// Sub-page header: back arrow + title, optional segmented progress (step of total).
+@Composable
+fun SubPageHeader(
+    title: String,
+    onBack: () -> Unit,
+    step: Int? = null,
+    totalSteps: Int = 3,
+    subtitle: String? = null
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = ScreenPadding, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Ink)
+            }
+            Spacer(Modifier.weight(1f))
+            if (step != null) {
+                Text("$step / $totalSteps", fontSize = 13.sp, color = InkSoft, fontWeight = FontWeight.Medium)
+            }
+        }
+        if (step != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ScreenPadding, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(totalSteps) { i ->
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(if (i < step) Ink else Hairline)
+                    )
+                }
+            }
+        }
+        Column(
+            modifier = Modifier.padding(
+                start = ScreenPadding, end = ScreenPadding, top = 12.dp, bottom = 12.dp
+            )
+        ) {
+            Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Ink, lineHeight = 32.sp)
+            if (subtitle != null) {
+                Spacer(Modifier.height(6.dp))
+                ScreenSubtitle(subtitle)
+            }
+        }
+    }
+}
+
+// Flat gray panel used instead of elevated cards.
+@Composable
+fun Panel(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Tint)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(20.dp),
+        content = content
+    )
+}
+
+@Composable
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = InkSoft,
+        modifier = modifier.padding(bottom = 10.dp)
+    )
+}
+
+// Toggleable pill: black when selected, hairline outline otherwise.
+@Composable
+fun SelectPill(text: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        text = text,
+        fontSize = 14.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        color = if (selected) Paper else Ink,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) Ink else Paper)
+            .border(1.dp, if (selected) Ink else Hairline, RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    )
+}
+
+// Small static tag.
+@Composable
+fun Tag(text: String, inverted: Boolean = false) {
+    Text(
+        text = text,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = if (inverted) Paper else Ink,
+        modifier = Modifier
+            .background(if (inverted) Ink else Paper, RoundedCornerShape(50))
+            .border(1.dp, if (inverted) Ink else Hairline, RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    )
+}
+
+// Quiet note box for cautions / disclaimers.
+@Composable
+fun NoteBox(text: String, modifier: Modifier = Modifier, title: String? = null) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, Hairline, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        if (title != null) {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Ink)
+            Spacer(Modifier.height(4.dp))
+        }
+        Text(text, fontSize = 12.sp, lineHeight = 18.sp, color = InkSoft)
+    }
+}
+
+// Label / value row with a hairline under it.
+@Composable
+fun KeyValueRow(label: String, value: String, showDivider: Boolean = true) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, fontSize = 14.sp, color = InkSoft)
+            Spacer(Modifier.width(12.dp))
+            Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+        }
+        if (showDivider) Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+    }
+}
+
+// Pinned bottom action area above the navigation bar.
+@Composable
+fun BottomActions(content: @Composable RowScope.() -> Unit) {
+    Column {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Paper)
+                .padding(horizontal = ScreenPadding, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    }
 }

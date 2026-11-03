@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -18,8 +19,9 @@ import androidx.compose.ui.unit.sp
 import com.alignfit.app.data.HomecareDictionary
 import com.alignfit.app.network.AnalysisResponse
 
-// ─── Page 5: Posture Analysis Result ─────────────────────────────────────────
+// ─── Analysis Result ──────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AnalysisResultScreen(
     result: AnalysisResponse?,
@@ -28,292 +30,133 @@ internal fun AnalysisResultScreen(
     bodyMapSelections: Set<String>,
     onExercise: () -> Unit,
     onConsultation: () -> Unit,
-    onRestart: () -> Unit,
-    onBack: () -> Unit
+    onRestart: () -> Unit
 ) {
     val postureFlags = remember(result) { HomecareDictionary.inferPostureFlags(result) }
     val hasPainSelection = selectedPainIds.isNotEmpty() || bodyMapSelections.isNotEmpty()
     val hasPostureIssue = HomecareDictionary.hasPostureIssue(postureFlags)
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "자세 분석 결과", onBack = onBack)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        PageHeader(title = "분석 결과", subtitle = "사진을 바탕으로 한 참고용 자세 분석이에요.")
+        Column(modifier = Modifier.padding(horizontal = ScreenPadding)) {
             displayBitmap?.let { bmp ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = "자세 분석 이미지",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(260.dp),
-                        contentScale = ContentScale.Fit
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = "자세 분석 이미지",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Tint),
+                    contentScale = ContentScale.Fit
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+
+            if (result == null) {
+                NoteBox("분석 결과가 없습니다.")
+            } else {
+                Panel {
+                    Tag(
+                        text = when {
+                            !result.landmarkDetected -> "인식 실패"
+                            hasPostureIssue -> "살펴볼 부분 있음"
+                            else -> "균형 안정적"
+                        },
+                        inverted = true
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = if (!result.landmarkDetected) {
+                            "사진에서 자세를 인식하지 못했어요. 전신이 잘 보이는 밝은 정면 사진으로 다시 시도해 주세요."
+                        } else {
+                            buildOverallSummary(result, hasPostureIssue)
+                        },
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Ink
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+
+                if (result.landmarkDetected) {
+                    Spacer(Modifier.height(28.dp))
+                    SectionLabel("측정값")
+                    val metrics = listOf(
+                        "어깨 좌우 높이" to "%.1f%%".format(result.shoulderHeightDifference * 100),
+                        "골반 좌우 높이" to "%.1f%%".format(result.hipHeightDifference * 100),
+                        "머리 정렬" to tiltShortValue(result.headTiltDirection, result.headTiltAngleDegrees),
+                        "몸통 중심" to tiltShortValue(result.trunkTiltDirection, result.trunkCenterlineAngleDegrees),
+                        "발 방향" to footShortValue(result.footDirectionStatus, result.footDirectionDifferenceDegrees)
+                    )
+                    metrics.forEachIndexed { i, (label, value) ->
+                        KeyValueRow(label, value, showDivider = i < metrics.lastIndex)
+                    }
+
+                    Spacer(Modifier.height(28.dp))
+                    SectionLabel("자세히 보기")
+                    val findings = detailedFindings(result)
+                    if (findings.isEmpty()) {
+                        Text(result.simpleSummary, fontSize = 14.sp, lineHeight = 21.sp, color = Ink)
+                    } else {
+                        findings.forEach { (label, sentence) ->
+                            Column(modifier = Modifier.padding(bottom = 14.dp)) {
+                                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Ink)
+                                Spacer(Modifier.height(2.dp))
+                                Text(sentence, fontSize = 14.sp, lineHeight = 21.sp, color = InkSoft)
+                            }
+                        }
+                    }
+                }
             }
 
             if (hasPainSelection) {
-                SelectionSummaryCard(
-                    selectedPainIds = selectedPainIds,
-                    bodyMapSelections = bodyMapSelections
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            if (result != null) {
-                OverallSummaryCard(result = result, hasPostureIssue = hasPostureIssue)
-                if (result.landmarkDetected) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    DetailedFindingsCard(result = result)
-                    if (hasPainSelection) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        PainConnectionCard(result = result, hasPostureIssue = hasPostureIssue)
+                Spacer(Modifier.height(20.dp))
+                SectionLabel("선택한 부위")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    (selectedPainIds.sorted().map { HomecareDictionary.painLabel(it) } +
+                        bodyMapSelections.sorted().map { HomecareDictionary.svgRegionLabel(it) })
+                        .distinct()
+                        .forEach { Tag(it) }
+                }
+                if (result != null && result.landmarkDetected) {
+                    Spacer(Modifier.height(16.dp))
+                    Panel {
+                        Text("통증 부위와 함께 보면", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Ink)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            buildPainConnectionText(result, hasPostureIssue),
+                            fontSize = 14.sp,
+                            lineHeight = 21.sp,
+                            color = InkSoft
+                        )
                     }
                 }
-            } else {
-                Text("분석 결과가 없습니다.", color = MaterialTheme.colorScheme.error)
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             result?.cautionMessage?.let { caution ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = caution,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp,
-                        modifier = Modifier.padding(14.dp),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
+                NoteBox(caution)
             }
 
-            if (hasPostureIssue) {
-                PrimaryButton(text = "추천 운동 보기", onClick = onExercise)
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
+            Spacer(Modifier.height(24.dp))
+            PrimaryButton(text = "추천 운동 보기", onClick = onExercise)
             if (hasPainSelection) {
-                SecondaryButton(text = "상담 메모 보기", onClick = onConsultation)
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(Modifier.height(10.dp))
+                SecondaryButton(text = "상담 메모 만들기", onClick = onConsultation)
             }
-
-            TextButton(
-                onClick = onRestart,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("처음으로 돌아가기", fontSize = 14.sp)
+            Spacer(Modifier.height(4.dp))
+            TextButton(onClick = onRestart, modifier = Modifier.fillMaxWidth()) {
+                Text("다시 분석하기", fontSize = 14.sp, color = InkSoft)
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SelectionSummaryCard(
-    selectedPainIds: Set<String>,
-    bodyMapSelections: Set<String>
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                text = "선택한 불편 부위",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-            if (selectedPainIds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                SelectionChipRow(
-                    label = "통증 체크",
-                    items = selectedPainIds.sorted().map { HomecareDictionary.painLabel(it) }
-                )
-            }
-            if (bodyMapSelections.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                SelectionChipRow(
-                    label = "그림 선택",
-                    items = bodyMapSelections.sorted().map { HomecareDictionary.svgRegionLabel(it) }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SelectionChipRow(label: String, items: List<String>) {
-    Text(
-        text = label,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.height(4.dp))
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        items.forEach { text ->
-            AssistChip(
-                onClick = {},
-                label = { Text(text, fontSize = 12.sp) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverallSummaryCard(result: AnalysisResponse, hasPostureIssue: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "전체 요약",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            if (!result.landmarkDetected) {
-                Text(
-                    text = "사진에서 자세를 인식하지 못했습니다. 전신이 잘 보이는 밝은 정면 사진으로 다시 시도해 주세요.",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 13.sp
-                )
-            } else {
-                Text(
-                    text = buildOverallSummary(result, hasPostureIssue),
-                    fontSize = 13.sp,
-                    color = if (hasPostureIssue) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DetailedFindingsCard(result: AnalysisResponse) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "자세 세부 관찰",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            MetricRow(
-                label = "어깨 좌우 높이",
-                value = "%.1f%%".format(result.shoulderHeightDifference * 100)
-            )
-            MetricRow(
-                label = "골반 좌우 높이",
-                value = "%.1f%%".format(result.hipHeightDifference * 100)
-            )
-            MetricRow(
-                label = "머리 정렬",
-                value = tiltShortValue(result.headTiltDirection, result.headTiltAngleDegrees)
-            )
-            MetricRow(
-                label = "몸통 중심 정렬",
-                value = tiltShortValue(result.trunkTiltDirection, result.trunkCenterlineAngleDegrees)
-            )
-            MetricRow(
-                label = "발 방향 좌우 차이",
-                value = footShortValue(result.footDirectionStatus, result.footDirectionDifferenceDegrees)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-            val dividerColor = MaterialTheme.colorScheme.outlineVariant
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(dividerColor)
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            val findings = detailedFindings(result)
-            if (findings.isEmpty()) {
-                Text(
-                    text = result.simpleSummary,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                findings.forEach { (label, sentence) ->
-                    Row(modifier = Modifier.padding(vertical = 3.dp)) {
-                        Text(
-                            text = label,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.width(76.dp)
-                        )
-                        Text(
-                            text = sentence,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PainConnectionCard(result: AnalysisResponse, hasPostureIssue: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "통증 부위와 함께 보면",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = buildPainConnectionText(result, hasPostureIssue),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -434,23 +277,3 @@ private fun buildPainConnectionText(result: AnalysisResponse, hasPostureIssue: B
     }
 }
 
-@Composable
-private fun MetricRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}

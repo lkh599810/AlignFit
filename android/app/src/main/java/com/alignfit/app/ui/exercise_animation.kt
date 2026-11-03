@@ -148,14 +148,14 @@ private fun lerpPose(a: Map<String, Float>, b: Map<String, Float>, t: Float) =
 
 // ─── Composable ──────────────────────────────────────────────────────────────
 
-private val SceneBg = Color(0xFFEEF4F3)
-private val FloorColor = Color(0xFFC9D6D4)
-private val MatColor = Color(0xFFB9D6D3)
-private val PropColor = Color(0xFFA9B8B6)
-private val WallColor = Color(0xFFD5E1DF)
-private val NearColor = Color(0xFF3F8E8C)
-private val FarColor = Color(0xFF9CC7C4)
-private val FocusColor = Color(0xFFF2A65A)
+private val SceneBg = Color(0xFFF4F4F4)
+private val FloorColor = Color(0xFFD6D6D6)
+private val MatColor = Color(0xFFDDDDDD)
+private val PropColor = Color(0xFFC2C2C2)
+private val WallColor = Color(0xFFE4E4E4)
+private val NearColor = Color(0xFF1A1A1A)
+private val FarColor = Color(0xFFA8A8A8)
+private val FocusColor = Color(0xFFB8B8B8)
 
 // Draws nothing when the exercise has no keyframes (check hasExerciseAnimation first).
 @Composable
@@ -195,7 +195,7 @@ fun ExerciseAnimation(exerciseId: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(SCENE_W / SCENE_H)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
     ) {
         val i = (time / step).toInt().coerceIn(0, n - 1)
         val local = time - i * step
