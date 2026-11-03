@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -41,7 +43,11 @@ internal fun AnalysisResultScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        PageHeader(title = "분석 결과", subtitle = "사진을 바탕으로 한 참고용 자세 분석이에요.")
+        PageHeader(title = "분석 결과") {
+            IconButton(onClick = onRestart) {
+                Icon(Icons.Filled.Refresh, contentDescription = "다시 분석", tint = Ink)
+            }
+        }
         Column(modifier = Modifier.padding(horizontal = ScreenPadding)) {
             displayBitmap?.let { bmp ->
                 Image(
@@ -147,14 +153,10 @@ internal fun AnalysisResultScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            PrimaryButton(text = "추천 운동 보기", onClick = onExercise)
+            PrimaryButton(text = "추천 운동", onClick = onExercise)
             if (hasPainSelection) {
                 Spacer(Modifier.height(10.dp))
-                SecondaryButton(text = "상담 메모 만들기", onClick = onConsultation)
-            }
-            Spacer(Modifier.height(4.dp))
-            TextButton(onClick = onRestart, modifier = Modifier.fillMaxWidth()) {
-                Text("다시 분석하기", fontSize = 14.sp, color = InkSoft)
+                SecondaryButton(text = "상담 메모", onClick = onConsultation)
             }
             Spacer(Modifier.height(16.dp))
         }

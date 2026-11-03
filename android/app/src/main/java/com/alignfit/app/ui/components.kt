@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,7 +57,8 @@ fun SecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    icon: ImageVector? = null
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -66,34 +68,32 @@ fun SecondaryButton(
         border = BorderStroke(1.dp, Hairline),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink)
     ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+        }
         Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
     }
 }
 
+// Tab-root header: large bold title, optional trailing action (icon).
 @Composable
-fun ScreenSubtitle(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        fontSize = 14.sp,
-        lineHeight = 21.sp,
-        color = InkSoft,
-        modifier = modifier
-    )
-}
-
-// Tab-root header: large bold title, optional subtitle.
-@Composable
-fun PageHeader(title: String, subtitle: String? = null) {
-    Column(
+fun PageHeader(title: String, action: (@Composable () -> Unit)? = null) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = ScreenPadding, end = ScreenPadding, top = 28.dp, bottom = 16.dp)
+            .padding(start = ScreenPadding, end = 8.dp, top = 28.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Ink, lineHeight = 36.sp)
-        if (subtitle != null) {
-            Spacer(Modifier.height(6.dp))
-            ScreenSubtitle(subtitle)
-        }
+        Text(
+            title,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Ink,
+            lineHeight = 36.sp,
+            modifier = Modifier.weight(1f)
+        )
+        action?.invoke()
     }
 }
 
@@ -103,8 +103,7 @@ fun SubPageHeader(
     title: String,
     onBack: () -> Unit,
     step: Int? = null,
-    totalSteps: Int = 3,
-    subtitle: String? = null
+    totalSteps: Int = 3
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -116,40 +115,32 @@ fun SubPageHeader(
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Ink)
             }
-            Spacer(Modifier.weight(1f))
             if (step != null) {
-                Text("$step / $totalSteps", fontSize = 13.sp, color = InkSoft, fontWeight = FontWeight.Medium)
-            }
-        }
-        if (step != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = ScreenPadding, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                repeat(totalSteps) { i ->
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(if (i < step) Ink else Hairline)
-                    )
+                Spacer(Modifier.width(8.dp))
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    repeat(totalSteps) { i ->
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(if (i < step) Ink else Hairline)
+                        )
+                    }
                 }
             }
         }
-        Column(
-            modifier = Modifier.padding(
-                start = ScreenPadding, end = ScreenPadding, top = 12.dp, bottom = 12.dp
-            )
-        ) {
-            Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Ink, lineHeight = 32.sp)
-            if (subtitle != null) {
-                Spacer(Modifier.height(6.dp))
-                ScreenSubtitle(subtitle)
-            }
-        }
+        Text(
+            title,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Ink,
+            lineHeight = 32.sp,
+            modifier = Modifier.padding(start = ScreenPadding, end = ScreenPadding, top = 12.dp, bottom = 16.dp)
+        )
     }
 }
 

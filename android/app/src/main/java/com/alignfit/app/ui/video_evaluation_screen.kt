@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -75,10 +76,7 @@ fun VideoEvaluationScreen() {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        PageHeader(
-            title = "움직임 평가",
-            subtitle = "전신이 보이게 찍은 운동 영상(${MAX_VIDEO_SECONDS}초 이하)을 올리면 움직임을 분석해 참고용 피드백을 드려요."
-        )
+        PageHeader(title = "움직임 평가")
         Column(modifier = Modifier.padding(horizontal = ScreenPadding)) {
             // Video picker slot
             Row(
@@ -97,13 +95,17 @@ fun VideoEvaluationScreen() {
                         .background(Paper),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Ink)
+                    Icon(
+                        if (videoInfo == null) Icons.Filled.Add else Icons.Filled.PlayArrow,
+                        contentDescription = "영상 선택",
+                        tint = Ink
+                    )
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     val info = videoInfo
                     Text(
-                        text = info?.displayName ?: "운동 영상 선택",
+                        text = info?.displayName ?: "영상",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Ink,
@@ -112,10 +114,10 @@ fun VideoEvaluationScreen() {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = if (info != null) {
-                            val sizeMb = if (info.sizeBytes >= 0) "%.1fMB".format(info.sizeBytes / 1048576.0) else "크기 알 수 없음"
-                            val duration = info.durationSeconds?.let { "${it}초" } ?: "길이 알 수 없음"
-                            "$duration · $sizeMb · 탭해서 변경"
-                        } else "탭해서 갤러리에서 고르기",
+                            val sizeMb = if (info.sizeBytes >= 0) "%.1fMB".format(info.sizeBytes / 1048576.0) else "-"
+                            val duration = info.durationSeconds?.let { "${it}초" } ?: "-"
+                            "$duration · $sizeMb"
+                        } else "최대 ${MAX_VIDEO_SECONDS}초",
                         fontSize = 12.sp,
                         color = InkSoft
                     )
@@ -124,7 +126,7 @@ fun VideoEvaluationScreen() {
 
             Spacer(Modifier.height(12.dp))
             PrimaryButton(
-                text = if (isLoading) "분석 중…" else "영상 분석하기",
+                text = if (isLoading) "분석 중…" else "분석하기",
                 enabled = videoUri != null && !isLoading &&
                     videoInfo?.let { videoLimitError(it) } == null,
                 onClick = {
@@ -155,17 +157,11 @@ fun VideoEvaluationScreen() {
                     color = Ink,
                     trackColor = Hairline
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "영상을 업로드하고 분석하는 중이에요. 길이에 따라 1~2분 걸릴 수 있어요.",
-                    fontSize = 13.sp,
-                    color = InkSoft
-                )
             }
 
             if (errorText.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
-                NoteBox(text = errorText, title = "확인이 필요해요")
+                NoteBox(text = errorText)
             }
 
             result?.let { VideoResult(it) }
@@ -203,7 +199,7 @@ private fun VideoResult(r: PredictResponse) {
     Text(exercise.posturePatternKo, fontSize = 14.sp, lineHeight = 21.sp, color = InkSoft)
 
     Spacer(Modifier.height(28.dp))
-    SectionLabel("추천 홈케어 운동")
+    SectionLabel("추천 운동")
     if (r.recommendations.isEmpty()) {
         Text("추천 항목이 없습니다.", fontSize = 14.sp, color = InkSoft)
     }
@@ -247,7 +243,8 @@ private fun RecommendationItem(rec: VideoRecommendation) {
         Spacer(Modifier.height(12.dp))
         val query = rec.youtubeQuery?.takeIf { it.isNotBlank() } ?: "${rec.exerciseName} 운동"
         SecondaryButton(
-            text = "YouTube에서 동작 보기",
+            text = "YouTube",
+            icon = Icons.Filled.PlayArrow,
             onClick = {
                 val url = "https://www.youtube.com/results?search_query=" + Uri.encode(query)
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))

@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
@@ -63,21 +65,15 @@ internal fun ExerciseRecommendationScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        PageHeader(
-            title = "홈케어 운동",
-            subtitle = if (hasInput) "선택한 부위와 자세 분석 결과를 바탕으로 골랐어요."
-            else "자주 권하는 기본 운동이에요. 자세 분석을 하면 맞춤 추천을 받을 수 있어요."
-        )
+        PageHeader(title = "운동")
         Column(modifier = Modifier.padding(horizontal = ScreenPadding)) {
             if (!hasInput) {
                 Panel(onClick = onStartAnalysis) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("나에게 맞는 운동 찾기", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
-                            Spacer(Modifier.height(2.dp))
-                            Text("자세 분석 시작하기", fontSize = 13.sp, color = InkSoft)
-                        }
-                        Text("→", fontSize = 20.sp, color = Ink)
+                        Icon(Icons.Outlined.Face, contentDescription = null, tint = Ink)
+                        Spacer(Modifier.width(12.dp))
+                        Text("자세 분석", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink, modifier = Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Ink)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
@@ -93,14 +89,14 @@ internal fun ExerciseRecommendationScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            SectionLabel("추천 운동 ${recommendations.exercises.size}")
+            SectionLabel("추천")
             recommendations.exercises.forEach { exercise ->
                 ExerciseCard(exercise = exercise)
                 Spacer(Modifier.height(14.dp))
             }
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("전체 운동")
+            SectionLabel("전체")
             val others = HomecareDictionary.EXERCISES.filter { it.id !in recommendedIds }
             others.forEachIndexed { i, exercise ->
                 val expanded = expandedId == exercise.id
@@ -135,7 +131,7 @@ internal fun ExerciseRecommendationScreen(
             Spacer(Modifier.height(24.dp))
             NoteBox(
                 "운동 중 통증이 심해지거나 저림, 감각 이상, 힘 빠짐이 나타나면 즉시 중단하고 전문가 상담을 권장합니다.",
-                title = "운동 전 확인"
+                title = "주의"
             )
             Spacer(Modifier.height(24.dp))
         }
@@ -206,8 +202,6 @@ private fun ExerciseCard(exercise: ExerciseItem, showTitle: Boolean = true) {
         Spacer(Modifier.height(14.dp))
         HorizontalDivider(thickness = 1.dp, color = Hairline)
         Spacer(Modifier.height(12.dp))
-        Text("왜 이 운동인가요", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = InkSoft)
-        Spacer(Modifier.height(2.dp))
         Text(exercise.reason, fontSize = 13.sp, lineHeight = 19.sp, color = Ink)
         Spacer(Modifier.height(10.dp))
         Text("주의", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = InkSoft)
@@ -216,7 +210,8 @@ private fun ExerciseCard(exercise: ExerciseItem, showTitle: Boolean = true) {
 
         Spacer(Modifier.height(16.dp))
         SecondaryButton(
-            text = if (watchUrl != null) "영상 보기" else "YouTube에서 영상 찾기",
+            text = "YouTube",
+            icon = Icons.Filled.PlayArrow,
             onClick = { openUrl(watchUrl ?: searchUrl) }
         )
     }
@@ -265,11 +260,7 @@ private fun PlaceholderPreview(exerciseName: String, onClick: () -> Unit) {
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Ink)
-            Spacer(Modifier.height(4.dp))
-            Text("‘$exerciseName’ 영상 검색", fontSize = 13.sp, color = InkSoft)
-        }
+        Icon(Icons.Filled.PlayArrow, contentDescription = "$exerciseName 영상", tint = Ink)
     }
 }
 

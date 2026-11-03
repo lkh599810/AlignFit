@@ -38,7 +38,6 @@ internal fun ConsultationGuideScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SubPageHeader(
             title = "상담 메모",
-            subtitle = "‘어느 부위가, 언제부터, 어떤 동작에서 더 아픈지’를 먼저 이야기하면 좋아요.",
             onBack = onBack
         )
         Column(
@@ -48,8 +47,6 @@ internal fun ConsultationGuideScreen(
                 .padding(horizontal = ScreenPadding)
         ) {
             Panel {
-                Text("이렇게 말해 보세요", fontSize = 13.sp, color = InkSoft)
-                Spacer(Modifier.height(8.dp))
                 Text(
                     text = "“$consultationSummary”",
                     fontSize = 16.sp,
@@ -77,7 +74,7 @@ internal fun ConsultationGuideScreen(
                 text = if (result != null && result.landmarkDetected) {
                     result.simpleSummary
                 } else {
-                    "아직 분석 결과가 없거나 자세를 인식하지 못했어요. 분석 없이도 아래 내용을 활용할 수 있어요."
+                    "-"
                 },
                 fontSize = 14.sp,
                 lineHeight = 21.sp,

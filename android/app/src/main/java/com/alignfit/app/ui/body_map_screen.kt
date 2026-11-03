@@ -181,8 +181,7 @@ fun BodyMapSelectionScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         SubPageHeader(
-            title = "그림에서 짚어 주세요",
-            subtitle = "불편한 곳을 탭하면 선택되고, 다시 탭하면 해제돼요.",
+            title = "불편한 곳",
             onBack = onBack,
             step = 2
         )
@@ -222,12 +221,6 @@ fun BodyMapSelectionScreen(
                 }
             }
 
-            Text(
-                text = if (currentView == BodyMapView.FRONT) "거울을 보듯 화면 왼쪽이 내 몸의 왼쪽이에요." else " ",
-                fontSize = 12.sp,
-                color = InkFaint,
-                modifier = Modifier.padding(top = 8.dp)
-            )
 
             val map = bodyMaps[currentView]
             if (map == null) {
@@ -294,14 +287,13 @@ fun BodyMapSelectionScreen(
             }
 
             if (selectedRegions.isNotEmpty()) {
-                SectionLabel("선택한 부위 · 탭하면 해제")
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     selectedRegions.sorted().forEach { id ->
                         SelectPill(
-                            text = HomecareDictionary.svgRegionLabel(id) + "  ×",
+                            text = HomecareDictionary.svgRegionLabel(id),
                             selected = true,
                             onClick = { onRegionToggled(id) }
                         )
@@ -314,7 +306,7 @@ fun BodyMapSelectionScreen(
 
         BottomActions {
             PrimaryButton(
-                text = if (selectedRegions.isEmpty()) "건너뛰기" else "다음 (${selectedRegions.size}곳 선택)",
+                text = if (selectedRegions.isEmpty()) "건너뛰기" else "다음",
                 onClick = onNext,
                 modifier = Modifier.weight(1f)
             )

@@ -17,10 +17,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
@@ -244,61 +246,37 @@ private fun HomeScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = ScreenPadding)
     ) {
-        Spacer(Modifier.height(24.dp))
-        Text("AlignFit", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
-        Spacer(Modifier.height(20.dp))
-        Text(
-            "바른 자세,\n오늘부터 가볍게",
-            fontSize = 30.sp,
-            lineHeight = 40.sp,
-            fontWeight = FontWeight.Bold,
-            color = Ink
-        )
-        Spacer(Modifier.height(8.dp))
-        ScreenSubtitle("사진 한 장으로 자세 균형을 살펴보고, 부담 없는 홈케어 운동을 추천받으세요.")
         Spacer(Modifier.height(28.dp))
+        Text("AlignFit", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Ink)
+        Spacer(Modifier.height(24.dp))
 
-        // Primary call to action: black hero card.
-        Column(
+        // Primary action: black hero card.
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Ink)
                 .clickable(onClick = onStartAnalysis)
-                .padding(24.dp)
+                .padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("자세 분석", fontSize = 13.sp, color = InkFaint, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (lastResult != null) "새로 분석하기" else "지금 시작하기",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Paper,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Paper),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Ink)
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("불편한 부위", "사진 한 장", "결과 확인").forEachIndexed { i, label ->
-                    Text(
-                        "${i + 1}  $label",
-                        fontSize = 12.sp,
-                        color = Paper,
-                        modifier = Modifier
-                            .background(Paper.copy(alpha = 0.12f), RoundedCornerShape(50))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
-                }
+            Icon(Icons.Outlined.Face, contentDescription = null, tint = Paper, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(14.dp))
+            Text(
+                "자세 분석",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Paper,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Paper),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Ink)
             }
         }
 
@@ -306,21 +284,18 @@ private fun HomeScreen(
             Spacer(Modifier.height(12.dp))
             Panel(onClick = onOpenResult) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("최근 분석 결과", fontSize = 13.sp, color = InkSoft)
-                        Spacer(Modifier.height(4.dp))
-                        val flags = remember(lastResult) { HomecareDictionary.inferPostureFlags(lastResult) }
-                        Text(
-                            when {
-                                !lastResult.landmarkDetected -> "자세를 인식하지 못했어요"
-                                HomecareDictionary.hasPostureIssue(flags) -> "살펴볼 부분이 있어요"
-                                else -> "균형이 안정적이에요"
-                            },
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Ink
-                        )
-                    }
+                    val flags = remember(lastResult) { HomecareDictionary.inferPostureFlags(lastResult) }
+                    Text(
+                        when {
+                            !lastResult.landmarkDetected -> "인식 실패"
+                            HomecareDictionary.hasPostureIssue(flags) -> "살펴볼 부분 있음"
+                            else -> "균형 안정적"
+                        },
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Ink,
+                        modifier = Modifier.weight(1f)
+                    )
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "결과 보기", tint = Ink)
                 }
             }
@@ -330,22 +305,17 @@ private fun HomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             HomeTile(
                 icon = Icons.Outlined.FavoriteBorder,
-                title = "홈케어 운동",
-                body = "동작 애니메이션과\n단계별 가이드",
+                title = "운동",
                 onClick = { onOpenTab(AppTab.Exercise) },
                 modifier = Modifier.weight(1f)
             )
             HomeTile(
                 icon = Icons.Outlined.PlayArrow,
                 title = "움직임 평가",
-                body = "운동 영상으로\n움직임 피드백",
                 onClick = { onOpenTab(AppTab.Evaluate) },
                 modifier = Modifier.weight(1f)
             )
         }
-
-        Spacer(Modifier.height(28.dp))
-        NoteBox("AlignFit의 결과는 교육용 자세 참고 정보이며 의학적 진단이 아닙니다. 통증이 계속되거나 심해지면 전문가와 상담하세요.")
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -354,16 +324,13 @@ private fun HomeScreen(
 private fun HomeTile(
     icon: ImageVector,
     title: String,
-    body: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Panel(modifier = modifier, onClick = onClick) {
-        Icon(icon, contentDescription = null, tint = Ink, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.height(16.dp))
+        Icon(icon, contentDescription = null, tint = Ink, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(28.dp))
         Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
-        Spacer(Modifier.height(4.dp))
-        Text(body, fontSize = 12.sp, lineHeight = 17.sp, color = InkSoft)
     }
 }
 
@@ -380,7 +347,6 @@ private fun PainSelectionScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SubPageHeader(
             title = "어디가 불편하세요?",
-            subtitle = "해당하는 부위를 모두 골라 주세요. 없으면 넘어가도 괜찮아요.",
             onBack = onBack,
             step = 1
         )
@@ -413,7 +379,7 @@ private fun PainSelectionScreen(
         }
         BottomActions {
             PrimaryButton(
-                text = if (selectedPainIds.isEmpty()) "건너뛰기" else "다음 (${selectedPainIds.size}개 선택)",
+                text = if (selectedPainIds.isEmpty()) "건너뛰기" else "다음",
                 onClick = onNext,
                 modifier = Modifier.weight(1f)
             )
@@ -481,8 +447,7 @@ private fun ImageUploadScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         SubPageHeader(
-            title = "자세 사진을 올려 주세요",
-            subtitle = "전신이 보이는 밝은 정면 사진일수록 정확해요.",
+            title = "전신 사진",
             onBack = onBack,
             step = 3
         )
@@ -495,7 +460,7 @@ private fun ImageUploadScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(340.dp)
+                    .height(440.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(Tint)
                     .clickable(onClick = pickImage),
@@ -508,21 +473,26 @@ private fun ImageUploadScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Paper),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "다시 선택", tint = Ink)
+                    }
                 } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(Paper),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Outlined.Face, contentDescription = null, tint = Ink)
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        Text("탭해서 사진 선택", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ink)
-                        Spacer(Modifier.height(4.dp))
-                        Text("갤러리에서 고를 수 있어요", fontSize = 12.sp, color = InkSoft)
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Paper),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "사진 선택", tint = Ink, modifier = Modifier.size(28.dp))
                     }
                 }
             }
@@ -536,47 +506,22 @@ private fun ImageUploadScreen(
                     color = Ink,
                     trackColor = Hairline
                 )
-                Spacer(Modifier.height(8.dp))
-                Text("자세를 분석하고 있어요…", fontSize = 13.sp, color = InkSoft)
             }
 
             if (errorText.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                NoteBox(text = errorText, title = "분석하지 못했어요")
+                NoteBox(text = errorText)
             }
 
-            Spacer(Modifier.height(20.dp))
-            SectionLabel("촬영 팁")
-            listOf(
-                "머리부터 발끝까지 화면에 들어오게",
-                "카메라를 정면, 허리 높이에 두고",
-                "몸의 선이 보이는 옷을 입고 밝은 곳에서"
-            ).forEach { tip ->
-                Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(4.dp).clip(CircleShape).background(Ink))
-                    Spacer(Modifier.width(10.dp))
-                    Text(tip, fontSize = 14.sp, color = Ink)
-                }
-            }
             Spacer(Modifier.height(16.dp))
         }
         BottomActions {
-            if (selectedImageUri == null) {
-                PrimaryButton(text = "사진 선택", onClick = pickImage, modifier = Modifier.weight(1f))
-            } else {
-                SecondaryButton(
-                    text = "다시 선택",
-                    onClick = pickImage,
-                    enabled = !isLoading,
-                    modifier = Modifier.weight(1f)
-                )
-                PrimaryButton(
-                    text = if (isLoading) "분석 중…" else "분석하기",
-                    onClick = ::analyze,
-                    enabled = !isLoading,
-                    modifier = Modifier.weight(1.4f)
-                )
-            }
+            PrimaryButton(
+                text = if (isLoading) "분석 중…" else "분석하기",
+                onClick = ::analyze,
+                enabled = selectedImageUri != null && !isLoading,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
